@@ -39,6 +39,27 @@ public struct Measurement: Identifiable, Equatable, Codable, Sendable {
         }
         return total
     }
+
+    /// Plan-view (horizontal) area of the polygon `points`, projected onto the
+    /// XZ ground plane via the shoelace formula (m²). This is the footprint area
+    /// surveyors/landscapers quote — independent of slope. Zero for <3 points.
+    public var planArea: Double {
+        guard points.count >= 3 else { return 0 }
+        var sum = 0.0
+        for i in 0..<points.count {
+            let a = points[i]
+            let b = points[(i + 1) % points.count]
+            sum += a.x * b.z - b.x * a.z
+        }
+        return abs(sum) / 2.0
+    }
+
+    /// Closed-loop perimeter of `points` (m): the polyline length plus the
+    /// segment back to the start. Zero for <3 points.
+    public var closedPerimeter: Double {
+        guard points.count >= 3 else { return 0 }
+        return polylineLength + points[points.count - 1].distance(to: points[0])
+    }
 }
 
 /// A free-form note pinned to a location in the set (for sharing/handoff).
