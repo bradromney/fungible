@@ -31,8 +31,8 @@ let package = Package(
         // Device-independent capture math (ARKit/Metal-free).
         .target(name: "FungibleCapture", dependencies: ["FungibleDomain"]),
 
-        // Protocol seams; each depends only on the domain.
-        .target(name: "FungibleStorage", dependencies: ["FungibleDomain"]),
+        // Protocol seams; each depends only on the domain (storage also on capture).
+        .target(name: "FungibleStorage", dependencies: ["FungibleDomain", "FungibleCapture"]),
         .target(name: "FungibleSync", dependencies: ["FungibleDomain"]),
         .target(name: "FungibleRegistration", dependencies: ["FungibleDomain"]),
         .target(name: "FungibleGuidance", dependencies: ["FungibleDomain"]),
@@ -46,5 +46,7 @@ let package = Package(
         .testTarget(name: "FungibleMeasureTests", dependencies: ["FungibleMeasure", "FungibleDomain"]),
         .testTarget(name: "FungibleGuidanceTests", dependencies: ["FungibleGuidance", "FungibleDomain"]),
         .testTarget(name: "FungibleCaptureTests", dependencies: ["FungibleCapture", "FungibleDomain"]),
+        .testTarget(name: "FungibleStorageTests", dependencies: ["FungibleStorage", "FungibleCapture", "FungibleDomain"]),
+        .testTarget(name: "FungibleRegistrationTests", dependencies: ["FungibleRegistration", "FungibleDomain"]),
     ]
 )
