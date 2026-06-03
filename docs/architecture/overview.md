@@ -191,8 +191,8 @@ implementation. Swift bridges via module maps / C ABI (UniFFI for Rust crates).
 - **App + Metal + ARKit:** Xcode on macOS, LiDAR device for capture testing.
 - **Pure domain/logic modules:** `swift build`/`swift test` on Linux CI (no Apple
   deps) for fast feedback; device/UI tests on macOS runners.
-- A SessionStart hook (web sessions) will ensure the Swift package builds/tests
-  the device-independent modules.
+- GitHub Actions (`.github/workflows/ci.yml`) builds and tests `FungibleCore` on
+  every push; the full ARKit/Metal app is validated from Xcode on macOS.
 
 ## Open questions (tracked, not blocking)
 
