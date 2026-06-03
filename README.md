@@ -22,6 +22,8 @@ Metal app target and the multi-scan pipeline come next. See:
 - [Decisions](./docs/decisions) — why the stack looks the way it does
 - [Research](./docs/research) — OSS landscape + buy/build/reuse matrix
 - [Third-party licenses](./docs/third-party-licenses.md) — what we may ship
+- [Development setup](./docs/development.md) — build/test each tier
+- [`CLAUDE.md`](./CLAUDE.md) — orientation for AI/dev sessions
 
 This repo is a monorepo:
 
