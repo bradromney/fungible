@@ -14,6 +14,7 @@ let package = Package(
     products: [
         .library(name: "FungibleCore", targets: [
             "FungibleDomain",
+            "FungibleCapture",
             "FungibleStorage",
             "FungibleSync",
             "FungibleRegistration",
@@ -26,6 +27,9 @@ let package = Package(
     targets: [
         // Pure value types — no dependencies, no frameworks.
         .target(name: "FungibleDomain"),
+
+        // Device-independent capture math (ARKit/Metal-free).
+        .target(name: "FungibleCapture", dependencies: ["FungibleDomain"]),
 
         // Protocol seams; each depends only on the domain.
         .target(name: "FungibleStorage", dependencies: ["FungibleDomain"]),
@@ -41,5 +45,6 @@ let package = Package(
         .testTarget(name: "FungibleEntitlementsTests", dependencies: ["FungibleEntitlements", "FungibleDomain"]),
         .testTarget(name: "FungibleMeasureTests", dependencies: ["FungibleMeasure", "FungibleDomain"]),
         .testTarget(name: "FungibleGuidanceTests", dependencies: ["FungibleGuidance", "FungibleDomain"]),
+        .testTarget(name: "FungibleCaptureTests", dependencies: ["FungibleCapture", "FungibleDomain"]),
     ]
 )

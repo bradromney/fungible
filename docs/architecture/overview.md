@@ -69,7 +69,7 @@ domain logic is testable on Linux CI without a device.
 | Module | Responsibility | Key types / protocols | Heavy deps |
 | --- | --- | --- | --- |
 | `FungibleDomain` | Pure value types + IDs; no framework deps | `Scan`, `ScanSet`, `PointCloudRef`, `Pose`, `PoseGraph`, `RegionOfInterest`, `Measurement`, `Annotation` | none |
-| `FungibleCapture` | Turn ARKit frames into filtered point chunks | `CaptureSession` (protocol), `DepthFrame`, `PointChunk`, `ConfidenceFilter` | ARKit, Metal |
+| `FungibleCapture` | Depth→world unprojection + bounded voxel accumulation (pure math; the ARKit `ARFrame` adapter and Metal mirror live in the app) | `CameraIntrinsics`, `Unprojection`, `ConfidenceFilter`, `VoxelAccumulator`, `CapturedPoint` | none |
 | `FungibleRegistration` | Grow a set incrementally; maintain the pose graph | `Registrar` (protocol), `CoarseAligner`, `FineAligner`, `PoseGraphOptimizer`, `LoopCloser` | C++ via bridge |
 | `FungibleStorage` | Local-first persistence + format I/O | `ScanStore` (protocol), `PointCloudCodec`, `COPCWriter`, `CatalogStore` | C/C++/Rust via bridge |
 | `FungibleSync` | The pluggable sync layer | `SyncProvider` (protocol), `LocalOnlyProvider`, transfer/resume engine | per-driver |
