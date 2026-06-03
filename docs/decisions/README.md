@@ -15,3 +15,4 @@ Format: lightweight [MADR](https://adr.github.io/madr/)-style.
 | 0003 | Local-first storage with pluggable sync        | Accepted |
 | 0004 | Free MVP, monetization-ready architecture      | Accepted |
 | 0005 | No scan-count ceiling via incremental registration | Accepted |
+| 0006 | Position on whitespace, not the incumbent's exit | Accepted |
