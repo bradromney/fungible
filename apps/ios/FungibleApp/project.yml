@@ -1,0 +1,38 @@
+name: FungibleApp
+options:
+  bundleIdPrefix: ai.fungible
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+packages:
+  FungibleCore:
+    path: ../FungibleCore
+
+targets:
+  FungibleApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    dependencies:
+      - package: FungibleCore
+        product: FungibleCore
+    info:
+      path: Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Fungible
+        UILaunchScreen: {}
+        # LiDAR scene depth needs the hardware sensor.
+        UIRequiredDeviceCapabilities:
+          - arkit
+        NSCameraUsageDescription: >-
+          Fungible uses the camera and LiDAR scanner to capture 3D point clouds
+          of your site.
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+    settings:
+      base:
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: NO
