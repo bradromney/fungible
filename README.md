@@ -12,8 +12,18 @@ artificial scan limits.**
 
 ## Status
 
-🚧 Early foundation. See [`docs/`](./docs) for the architecture and the decision
-log. This repo is a monorepo:
+🚧 Early foundation (milestone M0). The device-independent core
+([`apps/ios/FungibleCore`](./apps/ios/FungibleCore)) has a tested domain model,
+the cut/fill and guidance engines, and the sync/registration seams; the ARKit +
+Metal app target and the multi-scan pipeline come next. See:
+
+- [Roadmap](./docs/roadmap.md) — milestones M0→M6 to a v1
+- [Architecture](./docs/architecture/overview.md) — how it fits together
+- [Decisions](./docs/decisions) — why the stack looks the way it does
+- [Research](./docs/research) — OSS landscape + buy/build/reuse matrix
+- [Third-party licenses](./docs/third-party-licenses.md) — what we may ship
+
+This repo is a monorepo:
 
 ```
 apps/ios/      # The iOS capture app (Swift / ARKit / Metal)         — primary
