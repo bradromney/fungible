@@ -1,0 +1,55 @@
+# ---- macOS ----
+.DS_Store
+*.swp
+
+# ---- Xcode / Swift ----
+build/
+DerivedData/
+*.xcuserstate
+*.xcscmblueprint
+xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+Pods/
+Carthage/Build/
+.swiftpm/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# ---- Node / web viewer ----
+node_modules/
+dist/
+.vite/
+.next/
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# ---- Python / services ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# ---- Point-cloud / large assets (never commit captures) ----
+*.las
+*.laz
+*.e57
+*.ply
+*.pts
+*.xyz
+*.pcd
+*.copc.laz
+sample-data/
+
+# ---- Secrets / local config ----
+*.pem
+*.p12
+*.mobileprovision
+secrets.json
