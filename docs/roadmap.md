@@ -56,6 +56,11 @@ The headline differentiator. Highest technical risk → time-boxed spike first.
 - Volume/stockpile + cut/fill report
 - **Demo:** measure a graded area; get cut/fill volumes a landscaper can quote.
 
+Landed (CI-tested): `CutFillEngine` (volume math), `Contours` (marching-squares
+topo from the DEM), and a pure-Swift `DXFExporter` (LINE/POINT/TEXT, survey
+plan-view mapping) — the civil-export path consumer scanners skip. Remaining:
+the on-cloud measurement UI and wiring DEM→contours→DXF in the app.
+
 ## M5 — Sync + sharing (opt-in, pluggable)
 
 - One cloud `SyncProvider` driver behind the existing interface (likely hosted
