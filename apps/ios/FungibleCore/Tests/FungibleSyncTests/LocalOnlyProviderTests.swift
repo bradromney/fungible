@@ -2,6 +2,20 @@ import XCTest
 import FungibleDomain
 @testable import FungibleSync
 
+/// Thread-safe progress sink: the `SyncProvider` progress closure is `@Sendable`,
+/// so we can't mutate a captured `var` from it. This box is safe to capture.
+private final class ProgressRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _last: Double = 0
+    var last: Double {
+        lock.lock(); defer { lock.unlock() }
+        return _last
+    }
+    func record(_ value: Double) {
+        lock.lock(); _last = value; lock.unlock()
+    }
+}
+
 final class LocalOnlyProviderTests: XCTestCase {
     private func makeTempFile(_ contents: String = "points") throws -> String {
         let url = FileManager.default.temporaryDirectory
@@ -16,13 +30,13 @@ final class LocalOnlyProviderTests: XCTestCase {
         defer { try? FileManager.default.removeItem(atPath: path) }
 
         let provider = LocalOnlyProvider()
-        var lastProgress = 0.0
+        let recorder = ProgressRecorder()
         let blob = SyncableBlob(hash: ContentHash(rawValue: "abc123"), localPath: path, byteSize: 6)
-        let ref = try await provider.upload(blob) { lastProgress = $0 }
+        let ref = try await provider.upload(blob) { recorder.record($0) }
 
         XCTAssertEqual(ref.backend, .localOnly)
         XCTAssertEqual(ref.locator, "abc123")
-        XCTAssertEqual(lastProgress, 1.0, accuracy: 1e-9)
+        XCTAssertEqual(recorder.last, 1.0, accuracy: 1e-9)
     }
 
     func testUploadMissingFileThrowsNotFound() async {
