@@ -81,7 +81,10 @@ def downsample(input_path: str, output_path: str, cell: float = 0.05) -> list[di
 
 
 def _reader_for(path: str) -> str:
-    ext = path.rsplit(".", 1)[-1].lower()
+    p = path.lower()
+    if p.endswith(".copc.laz"):
+        return "readers.copc"
+    ext = p.rsplit(".", 1)[-1]
     return {
         "las": "readers.las",
         "laz": "readers.las",
@@ -93,7 +96,10 @@ def _reader_for(path: str) -> str:
 
 
 def _writer_for(path: str) -> str:
-    ext = path.rsplit(".", 1)[-1].lower()
+    p = path.lower()
+    if p.endswith(".copc.laz"):
+        return "writers.copc"
+    ext = p.rsplit(".", 1)[-1]
     return {
         "las": "writers.las",
         "laz": "writers.las",
