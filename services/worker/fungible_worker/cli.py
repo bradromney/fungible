@@ -30,6 +30,10 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("input"); r.add_argument("output")
     r.add_argument("--in-srs", required=True)
     r.add_argument("--out-srs", required=True)
+
+    s = sub.add_parser("downsample")
+    s.add_argument("input"); s.add_argument("output")
+    s.add_argument("--cell", type=float, default=0.05)
     return p
 
 
@@ -42,6 +46,8 @@ def job_from_args(args: argparse.Namespace) -> Job:
     if args.command == "reproject":
         return Job(JobKind.REPROJECT, args.input, args.output,
                    in_srs=args.in_srs, out_srs=args.out_srs)
+    if args.command == "downsample":
+        return Job(JobKind.DOWNSAMPLE, args.input, args.output, resolution=args.cell)
     raise ValueError(f"unknown command: {args.command}")
 
 

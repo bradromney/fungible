@@ -51,3 +51,34 @@ def test_plan_dispatches_by_kind():
 def test_plan_reproject_requires_srs():
     with pytest.raises(ValueError):
         plan(Job(JobKind.REPROJECT, "i.las", "o.las"))
+
+
+def test_merge_reads_every_input_then_merges():
+    p = pipelines.merge(["a.las", "b.laz", "c.ply"], "merged.copc.laz")
+    readers = [s for s in p if s["type"].startswith("readers.")]
+    assert len(readers) == 3
+    assert any(s["type"] == "filters.merge" for s in p)
+    assert p[-1]["type"] == "writers.copc"
+
+
+def test_merge_rejects_empty():
+    with pytest.raises(ValueError):
+        pipelines.merge([], "out.las")
+
+
+def test_downsample_uses_voxel_filter_with_cell():
+    p = pipelines.downsample("in.laz", "preview.laz", cell=0.1)
+    flt = next(s for s in p if s["type"].startswith("filters."))
+    assert flt["type"] == "filters.voxelcentroidnearestneighbor"
+    assert flt["cell"] == 0.1
+
+
+def test_downsample_rejects_bad_cell():
+    with pytest.raises(ValueError):
+        pipelines.downsample("in.laz", "out.laz", cell=0)
+
+
+def test_plan_downsample_maps_resolution_to_cell():
+    pipeline = plan(Job(JobKind.DOWNSAMPLE, "i.laz", "o.laz", resolution=0.2))
+    flt = next(s for s in pipeline if s["type"].startswith("filters."))
+    assert flt["cell"] == 0.2

@@ -59,6 +59,27 @@ def to_dem(
     ]
 
 
+def merge(inputs: list[str], output_path: str) -> list[dict[str, Any]]:
+    """Merge several clouds into one (e.g. a set's registered scans → one file)."""
+    if not inputs:
+        raise ValueError("merge requires at least one input")
+    stages: list[dict[str, Any]] = [{"type": _reader_for(p), "filename": p} for p in inputs]
+    stages.append({"type": "filters.merge"})
+    stages.append({"type": _writer_for(output_path), "filename": output_path})
+    return stages
+
+
+def downsample(input_path: str, output_path: str, cell: float = 0.05) -> list[dict[str, Any]]:
+    """Voxel-downsample a cloud (e.g. to build a lightweight web preview)."""
+    if cell <= 0:
+        raise ValueError("cell must be positive")
+    return [
+        {"type": _reader_for(input_path), "filename": input_path},
+        {"type": "filters.voxelcentroidnearestneighbor", "cell": cell},
+        {"type": _writer_for(output_path), "filename": output_path},
+    ]
+
+
 def _reader_for(path: str) -> str:
     ext = path.rsplit(".", 1)[-1].lower()
     return {

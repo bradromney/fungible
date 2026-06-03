@@ -16,6 +16,7 @@ class JobKind(str, Enum):
     TO_COPC = "to_copc"
     TO_DEM = "to_dem"
     REPROJECT = "reproject"
+    DOWNSAMPLE = "downsample"
 
 
 @dataclass(frozen=True)
@@ -36,6 +37,8 @@ def plan(job: Job) -> list[dict[str, Any]]:
         return pipelines.to_copc(job.input_path, job.output_path)
     if job.kind is JobKind.TO_DEM:
         return pipelines.to_dem(job.input_path, job.output_path, job.resolution, job.output_type)
+    if job.kind is JobKind.DOWNSAMPLE:
+        return pipelines.downsample(job.input_path, job.output_path, job.resolution)
     if job.kind is JobKind.REPROJECT:
         if not job.in_srs or not job.out_srs:
             raise ValueError("reproject requires in_srs and out_srs")
