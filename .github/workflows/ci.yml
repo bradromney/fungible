@@ -9,19 +9,44 @@ jobs:
   core:
     name: FungibleCore (build + test)
     runs-on: ubuntu-latest
-    # Use the official Swift image so the toolchain is preinstalled and we don't
-    # depend on a toolchain-fetch action (which 404'd on the hosted runner).
+    # Official Swift image so the toolchain is preinstalled and reliable.
     container: swift:5.9
     steps:
       - uses: actions/checkout@v4
-
       - name: Swift version
         run: swift --version
-
       - name: Build
         working-directory: apps/ios/FungibleCore
         run: swift build -v
-
       - name: Test
         working-directory: apps/ios/FungibleCore
         run: swift test -v
+
+  worker:
+    name: Cloud worker (pytest)
+    runs-on: ubuntu-latest
+    container: python:3.12-slim
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install test deps
+        working-directory: services/worker
+        run: pip install --no-cache-dir -r requirements-dev.txt
+      - name: Test
+        working-directory: services/worker
+        run: pytest -q
+
+  web:
+    name: Web viewer (typecheck + test)
+    runs-on: ubuntu-latest
+    container: node:20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install
+        working-directory: web/viewer
+        run: npm install --no-audit --no-fund
+      - name: Typecheck
+        working-directory: web/viewer
+        run: npm run typecheck
+      - name: Test
+        working-directory: web/viewer
+        run: npm test

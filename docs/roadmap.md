@@ -17,7 +17,11 @@ scope, not robustness. Sequence is dependency-ordered, not date-padded.
 
 ## M1 — Capture loop (single scan, on device)
 
-The first thing a user sees work. Depends on M0.
+The first thing a user sees work. Depends on M0. **App-layer scaffolding is
+committed** (`apps/ios/FungibleApp`: ARKit session, Metal unprojection shader,
+CPU unprojector on the tested core, guidance overlay, auto-save, XcodeGen spec);
+remaining work is building/validating it in Xcode on a LiDAR device and adding
+the live Metal point-cloud preview.
 
 - ARKit session: `smoothedSceneDepth` + `confidenceMap` + `ARMeshAnchor`
 - Metal unproject → confidence/range-filtered points → bounded accumulation
@@ -68,8 +72,12 @@ The headline differentiator. Highest technical risk → time-boxed spike first.
 
 ## Parallelizable tracks
 
-- **Cloud workers** (PDAL/GDAL/Open3D conversion + tiling) can start after M2.
-- **Web viewer** can start after M2 (needs a COPC/EPT to load).
+- **Cloud worker** (`services/worker`) — **skeleton committed**: pure, CI-tested
+  PDAL pipeline builders (to-COPC, to-DEM, reproject) + CLI; native PDAL/GDAL
+  execution wired but run server-side. Next: wire to storage + a job queue.
+- **Web viewer** (`web/viewer`) — **skeleton committed**: Vite/TS/three.js points
+  renderer + CI (typecheck + vitest). Next: swap in the COPC/Potree streaming
+  loader and measurement tools.
 - **Photogrammetry/splat** complement (COLMAP/gsplat, cloud) is post-v1.
 
 ## Risk register (tracked)

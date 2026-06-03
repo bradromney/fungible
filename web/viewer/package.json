@@ -1,0 +1,21 @@
+{
+  "name": "fungible-viewer",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Web point-cloud viewer for sharing and desktop site planning.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "three": "^0.160.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11",
+    "vitest": "^1.6.0"
+  }
+}

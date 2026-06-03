@@ -1,0 +1,12 @@
+# Runtime dependencies for actually executing pipelines.
+#
+# PDAL (with the COPC/E57/GDAL plugins) is a native library best installed via
+# conda-forge rather than pip:
+#
+#     conda install -c conda-forge pdal python-pdal gdal
+#
+# The Python bindings imported by fungible_worker.runner:
+#   python-pdal>=3.4
+#
+# Listed here for documentation; CI installs only requirements-dev.txt because
+# the pipeline builders (the tested logic) are pure and need no native stack.

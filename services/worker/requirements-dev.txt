@@ -1,0 +1,4 @@
+# CI / test dependencies only. The pure pipeline builders need nothing but
+# pytest. Runtime execution additionally needs the native PDAL/GDAL stack
+# (see requirements.txt) which is installed via conda, not pip.
+pytest>=8,<9
