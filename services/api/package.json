@@ -1,0 +1,18 @@
+{
+  "name": "fungible-api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Fungible sync/share API (Cloudflare Workers + R2 + D1).",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "dev": "npx wrangler dev",
+    "deploy": "npx wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240909.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}

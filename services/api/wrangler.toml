@@ -1,0 +1,14 @@
+name = "fungible-api"
+main = "src/index.ts"
+compatibility_date = "2024-09-01"
+
+# Object storage for point-cloud / mesh blobs (no egress fees on R2).
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "fungible-scans"
+
+# Metadata catalog (sets, shares).
+[[d1_databases]]
+binding = "DB"
+database_name = "fungible"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
