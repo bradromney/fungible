@@ -21,6 +21,7 @@ let package = Package(
             "FungibleGuidance",
             "FungibleMeasure",
             "FungibleExport",
+            "FungibleInsights",
             "FungibleEntitlements",
         ]),
         .library(name: "FungibleDomain", targets: ["FungibleDomain"]),
@@ -39,6 +40,7 @@ let package = Package(
         .target(name: "FungibleGuidance", dependencies: ["FungibleDomain"]),
         .target(name: "FungibleMeasure", dependencies: ["FungibleDomain"]),
         .target(name: "FungibleExport", dependencies: ["FungibleDomain", "FungibleCapture", "FungibleStorage"]),
+        .target(name: "FungibleInsights", dependencies: ["FungibleDomain"]),
         .target(name: "FungibleEntitlements", dependencies: ["FungibleDomain"]),
 
         // Tests for the device-independent core.
@@ -51,6 +53,7 @@ let package = Package(
         .testTarget(name: "FungibleStorageTests", dependencies: ["FungibleStorage", "FungibleCapture", "FungibleDomain"]),
         .testTarget(name: "FungibleRegistrationTests", dependencies: ["FungibleRegistration", "FungibleDomain"]),
         .testTarget(name: "FungibleExportTests", dependencies: ["FungibleExport", "FungibleStorage", "FungibleCapture", "FungibleDomain"]),
+        .testTarget(name: "FungibleInsightsTests", dependencies: ["FungibleInsights"]),
         .testTarget(name: "FungibleIntegrationTests", dependencies: [
             "FungibleDomain", "FungibleCapture", "FungibleStorage",
             "FungibleRegistration", "FungibleMeasure", "FungibleExport",
