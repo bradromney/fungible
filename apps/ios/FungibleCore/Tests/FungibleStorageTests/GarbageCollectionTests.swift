@@ -24,7 +24,8 @@ final class GarbageCollectionTests: XCTestCase {
         XCTAssertGreaterThan(freed, 0)
         XCTAssertEqual(after, before - freed)
         // Kept blob still readable; orphan gone.
-        XCTAssertEqual(try await store.readBlob(keptRef).count, 1)
+        let keptCount = try await store.readBlob(keptRef).count
+        XCTAssertEqual(keptCount, 1)
         do {
             _ = try await store.readBlob(orphanRef)
             XCTFail("orphan should be collected")
@@ -48,7 +49,8 @@ final class GarbageCollectionTests: XCTestCase {
         let freed = try await store.collectGarbage(keeping: [set])
         XCTAssertGreaterThan(freed, 0)
         XCTAssertNotNil(store.localURL(for: keptRef))
-        XCTAssertEqual(try await store.readBlob(keptRef).count, 1)
+        let keptCount = try await store.readBlob(keptRef).count
+        XCTAssertEqual(keptCount, 1)
     }
 
     func testGCKeepsEverythingWhenAllReferenced() async throws {

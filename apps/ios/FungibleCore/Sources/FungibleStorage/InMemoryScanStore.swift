@@ -45,8 +45,10 @@ public actor InMemoryScanStore: ScanStore {
     @discardableResult
     public func collectGarbage(keeping sets: [ScanSet]) async throws -> Int64 {
         let keep = referencedHashes(in: sets)
+        // Snapshot the orphans before mutating (don't mutate while iterating).
+        let orphans = blobs.filter { !keep.contains($0.key) }
         var freed: Int64 = 0
-        for (hash, data) in blobs where !keep.contains(hash) {
+        for (hash, data) in orphans {
             freed += Int64(data.count)
             blobs[hash] = nil
         }
