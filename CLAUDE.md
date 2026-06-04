@@ -4,12 +4,15 @@ Orientation for AI/dev sessions working in this repo. Read this first.
 
 ## What this is
 
-Fungible (codename) — an iOS-native LiDAR scanning app for construction/
-landscaping/site planning. Capture spaces as point clouds, then measure,
-compute earthwork (cut/fill), and export to the formats surveyors/CAD use.
-Positioned against incumbents on **no scan-count ceiling**, **mobile cut/fill**,
-**civil export**, and **outdoor-tuned scan guidance** (see
-`docs/research/competitive-landscape.md`).
+Fungible (codename) — an iOS-native LiDAR **capture + processing + interop
+platform**. Capture spaces as point clouds / 3D models, then measure, annotate,
+**convert between formats**, and hand off to CAD/BIM/3D tools. It serves **AEC
+(building/remodel/construction), general 3D modeling, and site/landscaping** —
+the core is market-agnostic; vertical features (earthwork, IFC/BIM, meshing) are
+modules on top. Landscaping is the **launch vertical, not the boundary**
+(ADR-0007). Differentiators: **no scan-count ceiling**, **universal interop**,
+guided capture, and (for site work) mobile cut/fill. See
+`docs/decisions/0007-multi-market-positioning.md`.
 
 ## Read these to understand *why*
 

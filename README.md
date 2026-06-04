@@ -1,8 +1,11 @@
 # Fungible
 
-> Working codename. A modern, iOS-native LiDAR scanning app for construction,
-> landscaping, and site planning — capturing real-world spaces as point clouds
-> ("dot maps") so professionals can measure, annotate, and plan changes.
+> Working codename. A modern, iOS-native LiDAR capture + processing + interop
+> platform — turn real-world spaces into point clouds and 3D models you can
+> measure, annotate, convert between formats, and hand off to CAD/BIM/3D tools.
+> Serves AEC (building/remodel/construction), general 3D modeling, and
+> site/landscaping work; **landscaping is the launch vertical, not the boundary**
+> (see [ADR-0007](./docs/decisions/0007-multi-market-positioning.md)).
 
 Built to step in as the incumbent ([SiteScape](https://www.sitescape.ai/)) winds
 down. The thesis: the hard parts (real-time capture, multi-scan registration,
@@ -42,8 +45,13 @@ docs/          # Architecture, decision records (ADRs), research
    of a fixed 10-per-set batch. Scan, scan, scan — the app figures out the set.
 3. **Local-first, sync-optional** — scans live on-device and stay usable offline;
    cloud backup and sharing are opt-in via a pluggable storage layer.
-4. **Pro-grade export** — the formats surveyors, CAD, and BIM actually ingest
-   (LAS/LAZ, E57, and friends).
+4. **Universal interop** — read/convert/export the formats the 3D world actually
+   uses, point *and* mesh: LAS/LAZ/E57/PLY/XYZ/PTS/COPC ⇄ DXF/OBJ/glTF/USDZ.
+   Reliable file translation is a first-class feature, not an afterthought.
+5. **Works across verticals** — the same capture/registration/measurement core
+   serves AEC (as-builts, remodel, scan-to-CAD/BIM), general 3D modeling
+   (meshes for viz/AR/design), and site/landscaping (earthwork, grading). See
+   [ADR-0007](./docs/decisions/0007-multi-market-positioning.md).
 
 ## Key decisions
 
