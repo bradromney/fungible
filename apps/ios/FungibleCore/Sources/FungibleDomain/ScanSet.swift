@@ -19,6 +19,20 @@ public struct BoundingBox: Equatable, Codable, Sendable {
     }
 
     public var sizeMeters: Vector3 { max - min }
+
+    public var center: Vector3 { (min + max) * 0.5 }
+
+    /// Axis-aligned box enclosing all points (nil if empty). Useful for
+    /// defaulting a region-of-interest from a first scan.
+    static func containing(_ points: [Vector3]) -> BoundingBox? {
+        guard let first = points.first else { return nil }
+        var lo = first, hi = first
+        for p in points {
+            lo = Vector3(Swift.min(lo.x, p.x), Swift.min(lo.y, p.y), Swift.min(lo.z, p.z))
+            hi = Vector3(Swift.max(hi.x, p.x), Swift.max(hi.y, p.y), Swift.max(hi.z, p.z))
+        }
+        return BoundingBox(min: lo, max: hi)
+    }
 }
 
 /// Optional region the user cares about, plus how complete we consider coverage.
