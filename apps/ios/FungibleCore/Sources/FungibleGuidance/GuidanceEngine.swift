@@ -49,11 +49,14 @@ public struct Prompt: Equatable, Sendable {
     public var kind: Kind
     public var message: String
     public var severity: Int // higher = more important
+    /// For `.fillGap`: a unit direction toward the un-scanned area (UI arrow).
+    public var direction: Vector3?
 
-    public init(kind: Kind, message: String, severity: Int) {
+    public init(kind: Kind, message: String, severity: Int, direction: Vector3? = nil) {
         self.kind = kind
         self.message = message
         self.severity = severity
+        self.direction = direction
     }
 }
 
@@ -107,5 +110,36 @@ public struct RuleBasedGuidanceEngine: GuidanceEngine {
         }
 
         return prompts.sorted { $0.severity > $1.severity }
+    }
+
+    /// Coverage-aware evaluation: uses a `CoverageGrid` to emit either a "done"
+    /// signal or a directional "scan over there" prompt (carrying the gap
+    /// vector for an on-screen arrow), in addition to the motion/lighting checks.
+    public func evaluate(
+        signals: CaptureSignals,
+        coverage grid: CoverageGrid,
+        cameraPosition: Vector3,
+        completionThreshold: Double = 0.9
+    ) -> [Prompt] {
+        var prompts = evaluate(signals: signals, coverage: grid.coverage, roi: nil)
+        if grid.isComplete(threshold: completionThreshold) {
+            prompts.append(Prompt(kind: .coverageComplete,
+                                  message: "You've covered enough of this area. ✓", severity: 40))
+        } else if let dir = grid.gapDirection(from: cameraPosition) {
+            prompts.append(Prompt(kind: .fillGap, message: gapMessage(dir), severity: 45, direction: dir))
+        }
+        return prompts.sorted { $0.severity > $1.severity }
+    }
+
+    private func gapMessage(_ d: Vector3) -> String {
+        // Dominant horizontal axis → a plain-language hint (the precise arrow is
+        // carried in `direction`). X = east(+)/west(-), Z = north(+)/south(-).
+        let hint: String
+        if abs(d.x) >= abs(d.z) {
+            hint = d.x >= 0 ? "to your right" : "to your left"
+        } else {
+            hint = d.z >= 0 ? "ahead" : "behind you"
+        }
+        return "More to scan \(hint) — keep going."
     }
 }
