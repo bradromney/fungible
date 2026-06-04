@@ -19,9 +19,16 @@ npm test            # vitest
 
 CI runs `typecheck` + `test` on every push.
 
+## Loading a scan
+
+Pass a LAS/LAZ URL: `index.html?url=https://…/scan.laz`. With no `url` it shows a
+placeholder cloud. COPC range-streaming (via `copc.ts` + potree-core) layers on
+top of the same `toPointData` normalizer next.
+
 ## Structure
 
-- `src/format.ts` — pure display helpers (unit-tested, no DOM).
-- `src/pointCloudViewer.ts` — three.js renderer; the seam where the streaming
-  COPC/Potree loader replaces the in-memory buffer.
-- `src/main.ts` / `index.html` — bootstrap with a placeholder cloud.
+- `src/format.ts`, `src/copc.ts`, `src/pointData.ts` — pure, unit-tested logic
+  (display helpers, byte-range/manifest, attribute→buffer conversion).
+- `src/lasSource.ts` — loaders.gl LAS/LAZ fetch+parse (network edge).
+- `src/pointCloudViewer.ts` — three.js renderer (the seam for the streaming loader).
+- `src/main.ts` / `index.html` — bootstrap; loads `?url=` or a placeholder.

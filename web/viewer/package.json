@@ -11,6 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@loaders.gl/core": "^4.2.0",
+    "@loaders.gl/las": "^4.2.0",
     "three": "^0.160.1"
   },
   "devDependencies": {
