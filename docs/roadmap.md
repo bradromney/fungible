@@ -39,6 +39,11 @@ the live Metal point-cloud preview.
 - Export **LAZ + E57 + PLY**; share sheet
 - **Demo:** scan → export LAZ/E57 → open in CloudCompare/ReCap.
 
+Landed (CI-tested, pure Swift): **LAS 1.2** (uncompressed survey standard),
+PLY (binary/ASCII), XYZ, and DXF export, plus `ScanSetAssembler` (merge a
+registered set into one cloud). Remaining: **LAZ** (compression) and **E57**
+via the bridged codecs (las-rs/LASzip, libE57Format), and the share sheet.
+
 ## M3 — No-ceiling multi-scan registration (the first moat)
 
 The headline differentiator. Highest technical risk → time-boxed spike first.

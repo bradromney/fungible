@@ -13,11 +13,13 @@ public enum ExportFormat: String, CaseIterable, Sendable {
     case plyBinary   // PLY, binary little-endian (compact, recommended)
     case plyASCII    // PLY, ASCII (human-readable / debugging)
     case xyz         // ASCII "x y z r g b" per line (universal fallback)
+    case las         // ASPRS LAS 1.2 (uncompressed survey standard)
 
     public var fileExtension: String {
         switch self {
         case .plyBinary, .plyASCII: return "ply"
         case .xyz: return "xyz"
+        case .las: return "las"
         }
     }
 }
@@ -40,6 +42,7 @@ public enum Exporters {
         case .plyBinary: return PLYExporter(binary: true)
         case .plyASCII: return PLYExporter(binary: false)
         case .xyz: return XYZExporter()
+        case .las: return LASExporter()
         }
     }
 }
