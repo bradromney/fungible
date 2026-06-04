@@ -7,8 +7,8 @@ compatibility_date = "2024-09-01"
 binding = "BUCKET"
 bucket_name = "fungible-scans"
 
-# Metadata catalog (sets, shares).
+# Metadata catalog (sets, shares). Provisioned 2026-06-04.
 [[d1_databases]]
 binding = "DB"
 database_name = "fungible"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "cc401444-b302-4e49-accc-d888bd49e5be"

@@ -26,6 +26,7 @@ Metal app target and the multi-scan pipeline come next. See:
 - [Research](./docs/research) — OSS landscape + buy/build/reuse matrix
 - [Third-party licenses](./docs/third-party-licenses.md) — what we may ship
 - [Development setup](./docs/development.md) — build/test each tier
+- [Device build runbook](./docs/device-build.md) — run M1 on a LiDAR device
 - [`CLAUDE.md`](./CLAUDE.md) — orientation for AI/dev sessions
 
 This repo is a monorepo:

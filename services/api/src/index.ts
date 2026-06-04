@@ -1,6 +1,7 @@
 import type { Store } from "./store";
 import type { CreateSetBody, SetRecord, UploadTarget } from "./types";
 import { route, type ApiRequest } from "./router";
+import { buildPrompt, deterministicSummary, parseReportFacts } from "./report";
 
 // Cloudflare Workers entry. Adapts real Request/Response around the pure `route`
 // for JSON metadata endpoints, handles binary blob PUT/GET against R2 directly,
@@ -10,6 +11,39 @@ import { route, type ApiRequest } from "./router";
 export interface Env {
   DB: D1Database;
   BUCKET: R2Bucket;
+  /** Optional: set via `wrangler secret put ANTHROPIC_API_KEY` to enable
+   *  LLM-enhanced reports. Absent → deterministic reports (still works). */
+  ANTHROPIC_API_KEY?: string;
+}
+
+const REPORT_SYSTEM_PROMPT =
+  "You are a surveying and earthwork assistant. Produce concise, accurate, " +
+  "client-ready site summaries from measured facts. Never invent or alter numbers; " +
+  "use only the figures provided.";
+
+/// Claude API call for an enhanced narrative. Throws on any failure so the
+/// caller falls back to the deterministic summary.
+async function generateNarrative(prompt: string, apiKey: string): Promise<string> {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 400,
+      // Cached system block → prompt caching across report requests.
+      system: [{ type: "text", text: REPORT_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  if (!res.ok) throw new Error(`anthropic ${res.status}`);
+  const data = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
+  const text = data.content?.find((b) => b.type === "text")?.text;
+  if (!text) throw new Error("no text in anthropic response");
+  return text;
 }
 
 class D1Store implements Store {
@@ -87,6 +121,27 @@ export default {
         return object ? new Response(object.body, { status: 200 }) : new Response("not found", { status: 404 });
       }
       return new Response("method not allowed", { status: 405 });
+    }
+
+    // AI report (LLM-enhanced, deterministic fallback). Needs env + network, so
+    // it lives here rather than the pure router.
+    if (path === "/report" && request.method === "POST") {
+      let facts;
+      try {
+        facts = parseReportFacts(await request.json());
+      } catch {
+        facts = null;
+      }
+      if (!facts) return Response.json({ error: "expected { siteName, ... }" }, { status: 400 });
+      if (!env.ANTHROPIC_API_KEY) {
+        return Response.json({ report: deterministicSummary(facts), source: "deterministic" });
+      }
+      try {
+        const report = await generateNarrative(buildPrompt(facts), env.ANTHROPIC_API_KEY);
+        return Response.json({ report, source: "llm" });
+      } catch {
+        return Response.json({ report: deterministicSummary(facts), source: "deterministic-fallback" });
+      }
     }
 
     // JSON metadata endpoints.

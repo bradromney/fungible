@@ -24,6 +24,27 @@ POST /sets/:id/uploads     request a blob upload   -> 201 {url,key} | 404
 GET  /share/:token         public set by share     -> 200 | 404
 PUT  /blobs/:key           upload a blob to R2      -> 201
 GET  /blobs/:key           download a blob          -> 200 | 404
+POST /report               site report (facts->text)-> 200 {report,source}
+```
+
+`POST /report` takes measured facts (`{ siteName, areaSquareMeters?, cutVolume?,
+fillVolume?, pointCount?, units? }`) and returns a client-ready summary. If
+`ANTHROPIC_API_KEY` is set it's LLM-enhanced (`source: "llm"`); otherwise — or on
+any error — it returns the deterministic summary (`source: "deterministic"`). AI
+is enhancement, never a hard dependency.
+
+## Provisioned infrastructure (account: your Cloudflare)
+
+Already created (2026-06-04):
+- **R2 bucket** `fungible-scans`
+- **D1 database** `fungible` (id `cc401444-b302-4e49-accc-d888bd49e5be`), schema applied
+
+Remaining to go live (one command, needs `wrangler login` on your machine):
+
+```sh
+cd services/api && npm install
+npx wrangler deploy                                  # deploy the Worker
+npx wrangler secret put ANTHROPIC_API_KEY            # optional: enable LLM reports
 ```
 
 ## Develop / test (no cloud account needed)
