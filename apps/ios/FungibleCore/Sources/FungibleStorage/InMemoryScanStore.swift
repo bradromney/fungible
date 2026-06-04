@@ -41,4 +41,15 @@ public actor InMemoryScanStore: ScanStore {
     public func diskUsageBytes() async -> Int64 {
         Int64(blobs.values.reduce(0) { $0 + $1.count })
     }
+
+    @discardableResult
+    public func collectGarbage(keeping sets: [ScanSet]) async throws -> Int64 {
+        let keep = referencedHashes(in: sets)
+        var freed: Int64 = 0
+        for (hash, data) in blobs where !keep.contains(hash) {
+            freed += Int64(data.count)
+            blobs[hash] = nil
+        }
+        return freed
+    }
 }

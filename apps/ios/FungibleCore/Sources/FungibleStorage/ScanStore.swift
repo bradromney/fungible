@@ -25,6 +25,18 @@ public protocol ScanStore: Sendable {
     func localURL(for ref: PointCloudRef) -> URL?
     /// Total bytes the store is using on device.
     func diskUsageBytes() async -> Int64
+
+    /// Delete blobs not referenced by any of `keeping`'s scans. Returns bytes
+    /// freed. Use after deleting/trimming sets to reclaim orphaned point clouds.
+    @discardableResult
+    func collectGarbage(keeping sets: [ScanSet]) async throws -> Int64
+}
+
+public extension ScanStore {
+    /// Hashes still referenced by the given sets' scans.
+    func referencedHashes(in sets: [ScanSet]) -> Set<String> {
+        Set(sets.flatMap { $0.scans.compactMap { $0.pointCloud.hash?.rawValue } })
+    }
 }
 
 public enum StorageError: Error, Equatable, Sendable {

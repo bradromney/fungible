@@ -101,4 +101,19 @@ public struct FileScanStore: ScanStore {
         }
         return total
     }
+
+    @discardableResult
+    public func collectGarbage(keeping sets: [ScanSet]) async throws -> Int64 {
+        let keep = referencedHashes(in: sets)
+        var freed: Int64 = 0
+        let urls = (try? fm.contentsOfDirectory(at: blobsDir, includingPropertiesForKeys: [.fileSizeKey])) ?? []
+        for url in urls where url.pathExtension == "fpc" {
+            let hash = url.deletingPathExtension().lastPathComponent
+            guard !keep.contains(hash) else { continue }
+            let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
+            try? fm.removeItem(at: url)
+            freed += Int64(size)
+        }
+        return freed
+    }
 }
