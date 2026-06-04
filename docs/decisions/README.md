@@ -17,3 +17,4 @@ Format: lightweight [MADR](https://adr.github.io/madr/)-style.
 | 0005 | No scan-count ceiling via incremental registration | Accepted |
 | 0006 | Position on whitespace, not the incumbent's exit | Accepted |
 | 0007 | A general capture + interop platform; verticals on top | Accepted |
+| 0008 | Pure-Swift registration for v1; GICP a profiled drop-in | Accepted |

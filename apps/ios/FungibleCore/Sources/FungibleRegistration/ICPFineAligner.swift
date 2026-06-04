@@ -25,6 +25,10 @@ public struct ICPFineAligner: FineAligner {
             throw RegistrationError.notEnoughPoints
         }
 
+        // Index the target once (it doesn't move); cell size = the gate, so the
+        // 3×3×3 search returns the exact nearest within maxCorrespondenceDistance.
+        let index = SpatialHashGrid(points: targets, cellSize: maxCorrespondenceDistance)
+
         var current = initial
         var lastRMSE = Double.greatestFiniteMagnitude
         var inliers = 0
@@ -36,10 +40,10 @@ public struct ICPFineAligner: FineAligner {
 
             for p in source.points {
                 let tp = current.apply(to: p)
-                if let (q, dist) = nearest(to: tp, in: targets), dist <= maxCorrespondenceDistance {
+                if let hit = index.nearest(to: tp), hit.distance <= maxCorrespondenceDistance {
                     srcMatched.append(tp)
-                    tgtMatched.append(q)
-                    sqSum += dist * dist
+                    tgtMatched.append(hit.point)
+                    sqSum += hit.distance * hit.distance
                 }
             }
 
@@ -56,18 +60,6 @@ public struct ICPFineAligner: FineAligner {
 
         let fitness = Double(inliers) / Double(source.points.count)
         return RegistrationResult(transform: current, fitness: fitness, inlierRMSE: lastRMSE)
-    }
-
-    private func nearest(to point: Vector3, in cloud: [Vector3]) -> (Vector3, Double)? {
-        var best: Vector3?
-        var bestSq = Double.greatestFiniteMagnitude
-        for q in cloud {
-            let dx = q.x - point.x, dy = q.y - point.y, dz = q.z - point.z
-            let sq = dx * dx + dy * dy + dz * dz
-            if sq < bestSq { bestSq = sq; best = q }
-        }
-        guard let best else { return nil }
-        return (best, bestSq.squareRoot())
     }
 }
 
