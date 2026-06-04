@@ -2,13 +2,14 @@ import XCTest
 @testable import FungibleInsights
 
 final class SiteReportInputTests: XCTestCase {
-    func testNetVolumeAndTruckloads() {
+    func testNetVolumeAndTruckloads() throws {
         let input = SiteReportInput(
             siteName: "Backyard", areaSquareMeters: 350,
             cutVolume: 5, fillVolume: 47, pointCount: 1_200_000,
             truckCapacityCubicMeters: 10
         )
-        XCTAssertEqual(input.netVolume, 42, accuracy: 1e-9) // 47 - 5
+        let net = try XCTUnwrap(input.netVolume)
+        XCTAssertEqual(net, 42, accuracy: 1e-9)             // 47 - 5
         XCTAssertEqual(input.fillTruckloads, 5)             // ceil(47/10)
         XCTAssertEqual(input.cutTruckloads, 1)              // ceil(5/10)
     }
