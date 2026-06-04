@@ -1,4 +1,5 @@
 import XCTest
+import FungibleDomain
 @testable import FungibleInsights
 
 final class SiteReportInputTests: XCTestCase {
@@ -40,6 +41,18 @@ final class ReportComposerTests: XCTestCase {
     func testSummaryHandlesCutDominant() {
         let cutHeavy = SiteReportInput(siteName: "Pad", cutVolume: 30, fillVolume: 2)
         XCTAssertTrue(ReportComposer.summary(cutHeavy).contains("net cut of 28.0 m³"))
+    }
+
+    func testImperialUnitsRenderYardsAndFeet() {
+        let imperial = SiteReportInput(
+            siteName: "Grade", areaSquareMeters: 100, cutVolume: 0, fillVolume: 42,
+            units: .imperial
+        )
+        let s = ReportComposer.summary(imperial)
+        // 42 m³ ≈ 54.9 yd³, 100 m² ≈ 1076.4 ft²
+        XCTAssertTrue(s.contains("54.9 yd³"), s)
+        XCTAssertTrue(s.contains("1076.4 ft²"), s)
+        XCTAssertFalse(s.contains("m³"))
     }
 
     func testPromptIsFactsOnlyAndIncludesNumbers() {

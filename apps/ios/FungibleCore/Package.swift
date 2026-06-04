@@ -53,7 +53,7 @@ let package = Package(
         .testTarget(name: "FungibleStorageTests", dependencies: ["FungibleStorage", "FungibleCapture", "FungibleDomain"]),
         .testTarget(name: "FungibleRegistrationTests", dependencies: ["FungibleRegistration", "FungibleDomain"]),
         .testTarget(name: "FungibleExportTests", dependencies: ["FungibleExport", "FungibleStorage", "FungibleCapture", "FungibleDomain"]),
-        .testTarget(name: "FungibleInsightsTests", dependencies: ["FungibleInsights"]),
+        .testTarget(name: "FungibleInsightsTests", dependencies: ["FungibleInsights", "FungibleDomain"]),
         .testTarget(name: "FungibleIntegrationTests", dependencies: [
             "FungibleDomain", "FungibleCapture", "FungibleStorage",
             "FungibleRegistration", "FungibleMeasure", "FungibleExport",

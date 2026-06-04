@@ -1,4 +1,5 @@
 import Foundation
+import FungibleDomain
 
 // Two pure functions over SiteReportInput:
 //  • `summary` — a deterministic, no-AI plain-language report. The feature works
@@ -15,11 +16,11 @@ public enum ReportComposer {
 
         if let net = input.netVolume {
             let verb = net >= 0 ? "net fill" : "net cut"
-            parts.append("\(verb) of \(fmt(abs(net))) m³")
+            parts.append("\(verb) of \(vol(abs(net), input.units))")
             if let area = input.areaSquareMeters {
-                parts.append("over \(fmt(area)) m²")
+                parts.append("over \(area2(area, input.units))")
             }
-            parts.append("(cut \(fmt(input.cutVolume ?? 0)) m³, fill \(fmt(input.fillVolume ?? 0)) m³).")
+            parts.append("(cut \(vol(input.cutVolume ?? 0, input.units)), fill \(vol(input.fillVolume ?? 0, input.units))).")
             if input.fillTruckloads > 0 {
                 parts.append("Fill ≈ \(input.fillTruckloads) truckload\(plural(input.fillTruckloads)).")
             }
@@ -27,7 +28,7 @@ public enum ReportComposer {
                 parts.append("Cut ≈ \(input.cutTruckloads) truckload\(plural(input.cutTruckloads)).")
             }
         } else if let area = input.areaSquareMeters {
-            parts.append("plan area \(fmt(area)) m².")
+            parts.append("plan area \(area2(area, input.units)).")
         }
 
         for fact in input.facts {
@@ -49,11 +50,11 @@ public enum ReportComposer {
             "Facts:",
             "- Site: \(input.siteName)",
         ]
-        if let area = input.areaSquareMeters { lines.append("- Plan area: \(fmt(area)) m²") }
-        if let cut = input.cutVolume { lines.append("- Cut: \(fmt(cut)) m³") }
-        if let fill = input.fillVolume { lines.append("- Fill: \(fmt(fill)) m³") }
+        if let area = input.areaSquareMeters { lines.append("- Plan area: \(area2(area, input.units))") }
+        if let cut = input.cutVolume { lines.append("- Cut: \(vol(cut, input.units))") }
+        if let fill = input.fillVolume { lines.append("- Fill: \(vol(fill, input.units))") }
         if let net = input.netVolume {
-            lines.append("- Net: \(fmt(abs(net))) m³ (\(net >= 0 ? "fill" : "cut"))")
+            lines.append("- Net: \(vol(abs(net), input.units)) (\(net >= 0 ? "fill" : "cut"))")
         }
         if input.fillTruckloads > 0 { lines.append("- Fill haul: ~\(input.fillTruckloads) truckloads @ \(fmt(input.truckCapacityCubicMeters)) m³") }
         for fact in input.facts { lines.append("- \(fact.label): \(fact.value)") }
@@ -63,4 +64,20 @@ public enum ReportComposer {
 
     private static func fmt(_ v: Double) -> String { String(format: "%.1f", v) }
     private static func plural(_ n: Int) -> String { n == 1 ? "" : "s" }
+
+    /// Volume string in the requested units (m³ metric, yd³ imperial).
+    private static func vol(_ cubicMeters: Double, _ system: UnitSystem) -> String {
+        switch system {
+        case .metric: return "\(fmt(cubicMeters)) m³"
+        case .imperial: return "\(fmt(Units.cubicYards(cubicMeters))) yd³"
+        }
+    }
+
+    /// Area string in the requested units (m² metric, ft² imperial).
+    private static func area2(_ sqMeters: Double, _ system: UnitSystem) -> String {
+        switch system {
+        case .metric: return "\(fmt(sqMeters)) m²"
+        case .imperial: return "\(fmt(Units.squareFeet(sqMeters))) ft²"
+        }
+    }
 }

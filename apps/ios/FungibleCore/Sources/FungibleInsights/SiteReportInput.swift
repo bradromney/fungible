@@ -1,4 +1,5 @@
 import Foundation
+import FungibleDomain
 
 // Structured, measured facts about a scan/set — the input to report generation.
 // Deliberately primitive (no dependency on the measure/domain volume types) so
@@ -17,6 +18,8 @@ public struct SiteReportInput: Equatable, Sendable {
     public var facts: [(label: String, value: String)]
     /// Haul capacity for truckload estimates (m³ per load).
     public var truckCapacityCubicMeters: Double
+    /// Units for the rendered report (capture is always SI internally).
+    public var units: UnitSystem
 
     public init(
         siteName: String,
@@ -25,7 +28,8 @@ public struct SiteReportInput: Equatable, Sendable {
         fillVolume: Double? = nil,
         pointCount: Int = 0,
         facts: [(label: String, value: String)] = [],
-        truckCapacityCubicMeters: Double = 10
+        truckCapacityCubicMeters: Double = 10,
+        units: UnitSystem = .metric
     ) {
         self.siteName = siteName
         self.areaSquareMeters = areaSquareMeters
@@ -34,6 +38,7 @@ public struct SiteReportInput: Equatable, Sendable {
         self.pointCount = pointCount
         self.facts = facts
         self.truckCapacityCubicMeters = truckCapacityCubicMeters
+        self.units = units
     }
 
     /// Net volume (fill − cut): positive = net material added.
@@ -54,6 +59,7 @@ public struct SiteReportInput: Equatable, Sendable {
         a.siteName == b.siteName && a.areaSquareMeters == b.areaSquareMeters &&
         a.cutVolume == b.cutVolume && a.fillVolume == b.fillVolume &&
         a.pointCount == b.pointCount && a.truckCapacityCubicMeters == b.truckCapacityCubicMeters &&
+        a.units == b.units &&
         a.facts.map(\.label) == b.facts.map(\.label) && a.facts.map(\.value) == b.facts.map(\.value)
     }
 }
