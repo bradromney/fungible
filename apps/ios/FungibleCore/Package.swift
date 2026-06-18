@@ -23,6 +23,7 @@ let package = Package(
             "FungibleExport",
             "FungibleInsights",
             "FungibleEntitlements",
+            "FungiblePresentation",
         ]),
         .library(name: "FungibleDomain", targets: ["FungibleDomain"]),
     ],
@@ -43,6 +44,11 @@ let package = Package(
         .target(name: "FungibleInsights", dependencies: ["FungibleDomain"]),
         .target(name: "FungibleEntitlements", dependencies: ["FungibleDomain"]),
 
+        // Pure display formatting + view-model-side mappings (UI binds to this).
+        .target(name: "FungiblePresentation", dependencies: [
+            "FungibleDomain", "FungibleGuidance", "FungibleEntitlements",
+        ]),
+
         // Tests for the device-independent core.
         .testTarget(name: "FungibleDomainTests", dependencies: ["FungibleDomain"]),
         .testTarget(name: "FungibleSyncTests", dependencies: ["FungibleSync", "FungibleDomain"]),
@@ -54,6 +60,9 @@ let package = Package(
         .testTarget(name: "FungibleRegistrationTests", dependencies: ["FungibleRegistration", "FungibleDomain"]),
         .testTarget(name: "FungibleExportTests", dependencies: ["FungibleExport", "FungibleStorage", "FungibleCapture", "FungibleDomain"]),
         .testTarget(name: "FungibleInsightsTests", dependencies: ["FungibleInsights", "FungibleDomain"]),
+        .testTarget(name: "FungiblePresentationTests", dependencies: [
+            "FungiblePresentation", "FungibleDomain", "FungibleGuidance", "FungibleEntitlements",
+        ]),
         .testTarget(name: "FungibleIntegrationTests", dependencies: [
             "FungibleDomain", "FungibleCapture", "FungibleStorage",
             "FungibleRegistration", "FungibleMeasure", "FungibleExport",

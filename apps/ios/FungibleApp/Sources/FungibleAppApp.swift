@@ -10,7 +10,7 @@ struct FungibleAppApp: App {
 
     var body: some Scene {
         WindowGroup {
-            CaptureView(viewModel: CaptureViewModel(store: store))
+            RootView(store: store)
         }
     }
 
