@@ -49,8 +49,10 @@ struct MeasureAnnotateView: View {
     private var worldPoints: [Vector3] {
         tapLocations.map { Vector3(Double($0.x) * scale, 0, Double($0.y) * scale) }
     }
-    private var measurement: Measurement {
-        Measurement(kind: mode == .distance ? .distance : .area, points: worldPoints)
+    // Fully qualified: `Measurement` alone is ambiguous in the app (Foundation's
+    // Measurement<Unit> via SwiftUI vs. FungibleDomain.Measurement).
+    private var measurement: FungibleDomain.Measurement {
+        FungibleDomain.Measurement(kind: mode == .distance ? .distance : .area, points: worldPoints)
     }
     private var hasEnoughPoints: Bool {
         mode == .distance ? worldPoints.count >= 2 : worldPoints.count >= 3
