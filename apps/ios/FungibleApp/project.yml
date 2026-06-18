@@ -36,3 +36,12 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: "5.9"
         GENERATE_INFOPLIST_FILE: NO
+
+# Explicit shared scheme so `xcodebuild -scheme FungibleApp` is deterministic in
+# CI (and resolves the local FungibleCore package). Also what the device-build
+# runbook drives from Xcode.
+schemes:
+  FungibleApp:
+    build:
+      targets:
+        FungibleApp: all

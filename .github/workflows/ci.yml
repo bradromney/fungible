@@ -66,3 +66,28 @@ jobs:
       - name: Test
         working-directory: services/api
         run: npm test
+
+  app:
+    name: FungibleApp (compile, Simulator)
+    # macOS runner: the ARKit/Metal/SwiftUI app only compiles with Xcode. This
+    # is a COMPILE check (build for the iOS Simulator SDK, no signing, no device)
+    # — it catches SwiftUI/type errors the Linux core job can't. The live LiDAR
+    # capture loop still needs a real device (see docs/device-build.md).
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tooling versions
+        run: xcodebuild -version
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: apps/ios/FungibleApp
+        run: xcodegen generate
+      - name: Build for iOS Simulator (compile only, no signing)
+        working-directory: apps/ios/FungibleApp
+        run: |
+          xcodebuild build \
+            -project FungibleApp.xcodeproj \
+            -scheme FungibleApp \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO
