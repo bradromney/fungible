@@ -10,7 +10,7 @@ struct SettingsView: View {
 
     var body: some View {
         List {
-            Section("What's included") {
+            Section {
                 ForEach(Capability.allCases, id: \.self) { cap in
                     HStack {
                         Text(label(for: cap))
@@ -23,6 +23,8 @@ struct SettingsView: View {
                     }
                     .font(.subheadline)
                 }
+            } header: {
+                Text("What's included")
             } footer: {
                 Text("Everything is on during the beta. We'll be upfront before anything becomes a paid plan.")
             }
