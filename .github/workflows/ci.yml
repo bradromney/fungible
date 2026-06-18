@@ -73,7 +73,8 @@ jobs:
     # is a COMPILE check (build for the iOS Simulator SDK, no signing, no device)
     # — it catches SwiftUI/type errors the Linux core job can't. The live LiDAR
     # capture loop still needs a real device (see docs/device-build.md).
-    runs-on: macos-14
+    # macos-15 ships Xcode 16, which can open the project format XcodeGen emits.
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - name: Tooling versions
