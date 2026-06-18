@@ -7,12 +7,14 @@ import FungiblePresentation
 struct CaptureView: View {
     @StateObject var viewModel: CaptureViewModel
     @State private var isSaving = false
-    /// Dismisses the capture modal (owned by RootView), which reloads projects.
-    let onClose: () -> Void
+    /// Cancel (X) exits the capture flow; finish advances to the handoff.
+    let onCancel: () -> Void
+    let onFinish: () -> Void
 
-    init(viewModel: CaptureViewModel, onClose: @escaping () -> Void) {
+    init(viewModel: CaptureViewModel, onCancel: @escaping () -> Void, onFinish: @escaping () -> Void) {
         _viewModel = StateObject(wrappedValue: viewModel)
-        self.onClose = onClose
+        self.onCancel = onCancel
+        self.onFinish = onFinish
     }
 
     var body: some View {
@@ -35,7 +37,7 @@ struct CaptureView: View {
 
     private var topBar: some View {
         HStack {
-            Button(action: onClose) {
+            Button(action: onCancel) {
                 Image(systemName: "xmark")
                     .font(.subheadline.weight(.semibold))
                     .padding(10)
@@ -65,7 +67,7 @@ struct CaptureView: View {
                 isSaving = true
                 await viewModel.finishScan()
                 isSaving = false
-                onClose()
+                onFinish()
             }
         } label: {
             Text(isSaving ? "Saving…" : "Finish pass")

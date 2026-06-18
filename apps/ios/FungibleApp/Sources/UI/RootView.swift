@@ -30,9 +30,7 @@ struct RootView: View {
         .fullScreenCover(isPresented: $showCapture, onDismiss: {
             Task { await projects.load() }
         }) {
-            CaptureView(viewModel: CaptureViewModel(store: projects.store)) {
-                showCapture = false
-            }
+            CaptureFlowView(store: projects.store) { showCapture = false }
         }
     }
 }
