@@ -71,6 +71,14 @@ final class DisplayFormatTests: XCTestCase {
         XCTAssertNil(DisplayFormat.drift(nil))
     }
 
+    func testFileSize() {
+        XCTAssertEqual(DisplayFormat.fileSize(0), "0 B")
+        XCTAssertEqual(DisplayFormat.fileSize(512), "512 B")
+        XCTAssertEqual(DisplayFormat.fileSize(1024), "1 KB")
+        XCTAssertEqual(DisplayFormat.fileSize(5_242_880), "5 MB")        // 5 * 1024²
+        XCTAssertEqual(DisplayFormat.fileSize(1_610_612_736), "1.5 GB")  // 1.5 * 1024³
+    }
+
     func testPreciseTimestampIsDeterministic() {
         // 2026-06-18 14:14:00 UTC
         let date = Date(timeIntervalSince1970: 1_781_792_040)

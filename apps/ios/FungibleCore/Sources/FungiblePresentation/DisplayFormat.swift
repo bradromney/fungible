@@ -126,6 +126,23 @@ public enum DisplayFormat {
         return trimOne(meters * 100) + " cm drift"
     }
 
+    // MARK: - Byte sizes
+
+    /// Humanized file size from a byte count: 980 -> "980 B", 248_000_000 ->
+    /// "237 MB". Binary units (KB = 1024). Used for export filename + size.
+    public static func fileSize(_ bytes: Int) -> String {
+        let units = ["B", "KB", "MB", "GB", "TB"]
+        var value = Double(max(0, bytes))
+        var unit = 0
+        while value >= 1024 && unit < units.count - 1 {
+            value /= 1024
+            unit += 1
+        }
+        // Whole numbers for bytes; one decimal (trimmed) for KB and up.
+        if unit == 0 { return "\(Int(value)) B" }
+        return trimOne(value) + " " + units[unit]
+    }
+
     // MARK: - Timestamps
 
     /// Precise capture stamp — date + time, not relative ("2h ago" hides

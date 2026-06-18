@@ -15,6 +15,7 @@ struct ProjectDetailView: View {
     /// changed from the type menu — it only tunes vocabulary + one tool slot.
     @State private var projectType: ProjectType = .site
     @State private var tab: Tab = .passes
+    @State private var showExport = false
 
     enum Tab: String, CaseIterable, Identifiable { case passes = "Passes", details = "Details"; var id: String { rawValue } }
 
@@ -40,6 +41,7 @@ struct ProjectDetailView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) { typeMenu }
         }
+        .sheet(isPresented: $showExport) { ExportSheet(set: set) }
     }
 
     // MARK: - Viewer placeholder
@@ -71,23 +73,21 @@ struct ProjectDetailView: View {
     private var toolbar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 18) {
-                action("Measure", "ruler", softPro: false)
-                action("Annotate", "mappin.and.ellipse", softPro: false)
-                action("Export", "square.and.arrow.up", softPro: true)
+                action("Measure", "ruler", softPro: false) {}
+                action("Annotate", "mappin.and.ellipse", softPro: false) {}
+                action("Export", "square.and.arrow.up", softPro: true) { showExport = true }
                 // Contextual slot — Cut/Fill for site, Floorplan for interior, Mesh for object.
-                action(projectType.contextualToolLabel, projectType.contextualToolSymbol, softPro: true)
-                action("Share", "link", softPro: true)
-                action("Report", "doc.text", softPro: true)
+                action(projectType.contextualToolLabel, projectType.contextualToolSymbol, softPro: true) {}
+                action("Share", "link", softPro: true) {}
+                action("Report", "doc.text", softPro: true) {}
             }
             .padding(.horizontal)
             .padding(.vertical, 12)
         }
     }
 
-    private func action(_ title: String, _ symbol: String, softPro: Bool) -> some View {
-        Button {
-            // Destinations are built out per screen (04–07, 09). Stubbed for now.
-        } label: {
+    private func action(_ title: String, _ symbol: String, softPro: Bool, _ tap: @escaping () -> Void) -> some View {
+        Button(action: tap) {
             VStack(spacing: 6) {
                 ZStack(alignment: .topTrailing) {
                     Image(systemName: symbol)

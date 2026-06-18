@@ -140,6 +140,23 @@ final class ExportCatalogTests: XCTestCase {
                        ["USDZ", "OBJ", "glTF"])
     }
 
+    func testEveryFormatHasACardTag() {
+        for f in ExportCatalog.all {
+            XCTAssertFalse(f.tag.isEmpty, "\(f.ext) missing a card tag")
+        }
+    }
+
+    func testUnsupportedFallbackRedirectsMeshOnEmptyProject() {
+        let usdz = ExportCatalog.all.first { $0.ext == "USDZ" }!
+        let laz = ExportCatalog.all.first { $0.ext == "LAZ" }!
+        // A mesh format on a project with no geometry → redirect to PLY.
+        XCTAssertEqual(ExportCatalog.unsupportedFallback(for: usdz, pointCount: 0), "PLY")
+        // With geometry, the mesh format is fine.
+        XCTAssertNil(ExportCatalog.unsupportedFallback(for: usdz, pointCount: 1000))
+        // Point-cloud formats are always fine.
+        XCTAssertNil(ExportCatalog.unsupportedFallback(for: laz, pointCount: 0))
+    }
+
     func testSoftProBadgingUnderFreeMVP() {
         let ent = EntitlementsService(entitlements: .mvpFreeEverything)
         let e57 = ExportCatalog.all.first { $0.ext == "E57" }!
