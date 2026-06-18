@@ -93,6 +93,17 @@ public enum DisplayFormat {
         grouped(Int(sqMeters.rounded())) + " m²"
     }
 
+    /// Compact imperial area for the in-scene measure readout (always ft², no
+    /// acre promotion): 22.3 m² -> "240 ft²".
+    public static func areaFeetSquared(_ sqMeters: Double) -> String {
+        grouped(Int(Units.squareFeet(sqMeters).rounded())) + " ft²"
+    }
+
+    /// One-decimal metric area for the measure echo: 22.297 m² -> "22.3 m²".
+    public static func areaMeters(_ sqMeters: Double) -> String {
+        trimOne(sqMeters) + " m²"
+    }
+
     // MARK: - Volume (cubic meters in)
 
     /// Earthwork volume in cubic yards: 7.0 m³ -> "9.2 cu yd".

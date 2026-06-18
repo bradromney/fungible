@@ -53,6 +53,12 @@ final class DisplayFormatTests: XCTestCase {
         XCTAssertEqual(DisplayFormat.areaMetricEcho(2500), "2,500 m²")
     }
 
+    func testMeasureAreaReadout() {
+        // 22.297 m² ≈ 240 ft²
+        XCTAssertEqual(DisplayFormat.areaFeetSquared(22.297), "240 ft²")
+        XCTAssertEqual(DisplayFormat.areaMeters(22.297), "22.3 m²")
+    }
+
     func testVolumeAndTruckLoads() {
         // 7 m³ ≈ 9.156 cu yd
         XCTAssertEqual(DisplayFormat.volumeCubicYards(7), "9.2 cu yd")

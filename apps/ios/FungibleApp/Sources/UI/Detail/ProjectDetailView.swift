@@ -16,6 +16,7 @@ struct ProjectDetailView: View {
     @State private var projectType: ProjectType = .site
     @State private var tab: Tab = .passes
     @State private var showExport = false
+    @State private var measureMode: MeasureAnnotateView.Mode?
 
     enum Tab: String, CaseIterable, Identifiable { case passes = "Passes", details = "Details"; var id: String { rawValue } }
 
@@ -42,6 +43,7 @@ struct ProjectDetailView: View {
             ToolbarItem(placement: .navigationBarTrailing) { typeMenu }
         }
         .sheet(isPresented: $showExport) { ExportSheet(set: set) }
+        .fullScreenCover(item: $measureMode) { MeasureAnnotateView(initialMode: $0) }
     }
 
     // MARK: - Viewer placeholder
@@ -73,8 +75,8 @@ struct ProjectDetailView: View {
     private var toolbar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 18) {
-                action("Measure", "ruler", softPro: false) {}
-                action("Annotate", "mappin.and.ellipse", softPro: false) {}
+                action("Measure", "ruler", softPro: false) { measureMode = .distance }
+                action("Annotate", "mappin.and.ellipse", softPro: false) { measureMode = .annotate }
                 action("Export", "square.and.arrow.up", softPro: true) { showExport = true }
                 // Contextual slot — Cut/Fill for site, Floorplan for interior, Mesh for object.
                 action(projectType.contextualToolLabel, projectType.contextualToolSymbol, softPro: true) {}
