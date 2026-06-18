@@ -72,6 +72,26 @@ public enum ProjectType: String, Codable, Sendable, CaseIterable {
         }
     }
 
+    /// Section title for the market-specific facts (ADR-0007: same screen,
+    /// different vocabulary — never a fork).
+    public var factsSectionTitle: String {
+        switch self {
+        case .site:     return "Site facts"
+        case .interior: return "Room facts"
+        case .object:   return "Object facts"
+        }
+    }
+
+    /// The ordered fact labels a report/detail leads with, per market. The same
+    /// cloud feeds all of them; only the framing changes.
+    public var factLabels: [String] {
+        switch self {
+        case .site:     return ["Plan area", "Elevation range", "Net cut @ grade", "Avg slope"]
+        case .interior: return ["Floor area", "Ceiling height", "Wall area", "Openings"]
+        case .object:   return ["Height", "Max diameter", "Bounding box", "Coverage"]
+        }
+    }
+
     /// Heuristic auto-detection from a captured volume's bounding box. Open and
     /// wide-but-shallow reads as a site; room-scale enclosure reads as interior;
     /// small all-around reads as an object. A best-effort default the user can

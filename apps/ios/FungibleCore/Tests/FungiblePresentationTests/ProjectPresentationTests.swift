@@ -33,6 +33,17 @@ final class ProjectPresentationTests: XCTestCase {
         XCTAssertEqual(ProjectType.detect(bounds: b), .interior)
     }
 
+    func testMarketFactsVocabularySwitchesPerType() {
+        XCTAssertEqual(ProjectType.site.factsSectionTitle, "Site facts")
+        XCTAssertEqual(ProjectType.interior.factsSectionTitle, "Room facts")
+        XCTAssertEqual(ProjectType.object.factsSectionTitle, "Object facts")
+        // Each market leads with four facts; first is the area/size lead.
+        XCTAssertEqual(ProjectType.site.factLabels.first, "Plan area")
+        XCTAssertEqual(ProjectType.interior.factLabels.first, "Floor area")
+        XCTAssertEqual(ProjectType.object.factLabels.first, "Height")
+        for t in ProjectType.allCases { XCTAssertEqual(t.factLabels.count, 4) }
+    }
+
     func testContextualToolSwapsPerType() {
         XCTAssertEqual(ProjectType.site.contextualToolLabel, "Cut/Fill")
         XCTAssertEqual(ProjectType.interior.contextualToolLabel, "Floorplan")

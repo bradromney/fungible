@@ -18,6 +18,7 @@ struct ProjectDetailView: View {
     @State private var showExport = false
     @State private var showReport = false
     @State private var showCutFill = false
+    @State private var showShare = false
     @State private var measureMode: MeasureAnnotateView.Mode?
 
     enum Tab: String, CaseIterable, Identifiable { case passes = "Passes", details = "Details"; var id: String { rawValue } }
@@ -47,6 +48,7 @@ struct ProjectDetailView: View {
         .sheet(isPresented: $showExport) { ExportSheet(set: set) }
         .sheet(isPresented: $showReport) { NavigationStack { SiteReportView(set: set) } }
         .sheet(isPresented: $showCutFill) { CutFillView(project: set) }
+        .sheet(isPresented: $showShare) { ShareWebView(project: set) }
         .fullScreenCover(item: $measureMode) { MeasureAnnotateView(initialMode: $0) }
     }
 
@@ -86,7 +88,7 @@ struct ProjectDetailView: View {
                 action(projectType.contextualToolLabel, projectType.contextualToolSymbol, softPro: true) {
                     if projectType == .site { showCutFill = true }
                 }
-                action("Share", "link", softPro: true) {}
+                action("Share", "link", softPro: true) { showShare = true }
                 action("Report", "doc.text", softPro: true) { showReport = true }
             }
             .padding(.horizontal)
@@ -159,16 +161,43 @@ struct ProjectDetailView: View {
     // MARK: - Details
 
     private var detailsList: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            detailRow("Project type", projectType.chipLabel)
-            detailRow("Passes", DisplayFormat.passCount(set.scanCount))
-            detailRow("Measurements", "\(set.measurements.count)")
-            detailRow("Annotations", "\(set.annotations.count)")
-            detailRow("Coordinate system", set.crs?.epsg ?? "Local (set at export)")
-            detailRow("Created", DisplayFormat.preciseTimestamp(set.createdAt))
+        VStack(alignment: .leading, spacing: 18) {
+            // Market-specific facts (screen 11): the same Project Detail screen,
+            // with the vocabulary switching on project type (ADR-0007). The
+            // values come from the same cloud; geometry-derived ones need capture.
+            VStack(alignment: .leading, spacing: 10) {
+                Text(projectType.factsSectionTitle.uppercased())
+                    .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                ForEach(projectType.factLabels, id: \.self) { label in
+                    detailRow(label, marketFactValue(for: label))
+                }
+            }
+            Divider()
+            VStack(alignment: .leading, spacing: 14) {
+                detailRow("Project type", projectType.chipLabel)
+                detailRow("Passes", DisplayFormat.passCount(set.scanCount))
+                detailRow("Measurements", "\(set.measurements.count)")
+                detailRow("Annotations", "\(set.annotations.count)")
+                detailRow("Coordinate system", set.crs?.epsg ?? "Local (set at export)")
+                detailRow("Created", DisplayFormat.preciseTimestamp(set.createdAt))
+            }
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Market facts share one cloud; the area lead fills from an area measurement
+    /// when present, the geometry-derived facts await on-device DEM computation.
+    private func marketFactValue(for label: String) -> String {
+        switch label {
+        case "Plan area", "Floor area":
+            if let area = set.measurements.filter({ $0.kind == .area }).map(\.planArea).max() {
+                return DisplayFormat.areaFeetSquared(area)
+            }
+            return "Add a measurement"
+        default:
+            return "—"
+        }
     }
 
     private func detailRow(_ label: String, _ value: String) -> some View {
