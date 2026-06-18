@@ -16,6 +16,7 @@ struct ProjectDetailView: View {
     @State private var projectType: ProjectType = .site
     @State private var tab: Tab = .passes
     @State private var showExport = false
+    @State private var showReport = false
     @State private var measureMode: MeasureAnnotateView.Mode?
 
     enum Tab: String, CaseIterable, Identifiable { case passes = "Passes", details = "Details"; var id: String { rawValue } }
@@ -43,6 +44,7 @@ struct ProjectDetailView: View {
             ToolbarItem(placement: .navigationBarTrailing) { typeMenu }
         }
         .sheet(isPresented: $showExport) { ExportSheet(set: set) }
+        .sheet(isPresented: $showReport) { NavigationStack { SiteReportView(set: set) } }
         .fullScreenCover(item: $measureMode) { MeasureAnnotateView(initialMode: $0) }
     }
 
@@ -81,7 +83,7 @@ struct ProjectDetailView: View {
                 // Contextual slot — Cut/Fill for site, Floorplan for interior, Mesh for object.
                 action(projectType.contextualToolLabel, projectType.contextualToolSymbol, softPro: true) {}
                 action("Share", "link", softPro: true) {}
-                action("Report", "doc.text", softPro: true) {}
+                action("Report", "doc.text", softPro: true) { showReport = true }
             }
             .padding(.horizontal)
             .padding(.vertical, 12)
