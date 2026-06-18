@@ -60,7 +60,9 @@ struct ExportSheet: View {
     private var selected: ExportFormat {
         ExportCatalog.all.first { $0.id == selectedID } ?? ExportCatalog.all[0]
     }
-    private var totalPoints: Int { set.scans.reduce(0) { $0 + $1.pointCloud.pointCount } }
+    // `self.` is required: a computed-property body starting with the bare token
+    // `set` is parsed as a setter accessor, not the `set` property.
+    private var totalPoints: Int { self.set.scans.reduce(0) { $0 + $1.pointCloud.pointCount } }
     private var estimatedBytes: Int { totalPoints * 8 }   // rough per-point estimate
     private var fileName: String {
         let base = set.name.isEmpty ? "Untitled" : set.name
