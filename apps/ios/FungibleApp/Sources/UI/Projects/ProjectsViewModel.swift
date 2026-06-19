@@ -55,7 +55,7 @@ final class ProjectsViewModel: ObservableObject {
         Task { try? await store.save(snapshot) }
     }
 
-    func addMeasurement(_ m: Measurement, to id: ScanSetID) { update(id) { $0.upsert(m) } }
+    func addMeasurement(_ m: FungibleDomain.Measurement, to id: ScanSetID) { update(id) { $0.upsert(m) } }
     func addAnnotation(_ a: Annotation, to id: ScanSetID) { update(id) { $0.upsert(a) } }
     func setType(_ type: ProjectType, for id: ScanSetID) { update(id) { $0.type = type } }
     func updateShare(_ share: ShareSettings, for id: ScanSetID) { update(id) { $0.share = share } }
