@@ -62,22 +62,47 @@ public struct Measurement: Identifiable, Equatable, Codable, Sendable {
     }
 }
 
+/// How a pinned note is classified for triage/handoff. The data lives here;
+/// display strings/glyphs live in `FungiblePresentation` (ADR-0009).
+public enum AnnotationCategory: String, Codable, Sendable, CaseIterable {
+    case issue
+    case todo
+    case note
+    case spec
+}
+
 /// A free-form note pinned to a location in the set (for sharing/handoff).
 public struct Annotation: Identifiable, Equatable, Codable, Sendable {
     public let id: AnnotationID
     public var position: Vector3
     public var text: String
+    public var category: AnnotationCategory
     public var createdAt: Date
 
     public init(
         id: AnnotationID = AnnotationID(),
         position: Vector3,
         text: String,
+        category: AnnotationCategory = .note,
         createdAt: Date = Date()
     ) {
         self.id = id
         self.position = position
         self.text = text
+        self.category = category
         self.createdAt = createdAt
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, position, text, category, createdAt }
+
+    // Tolerant decode (ADR-0009): a pin written before `category` existed loads
+    // as `.note` rather than failing the whole catalog.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(AnnotationID.self, forKey: .id)
+        position = try c.decode(Vector3.self, forKey: .position)
+        text = try c.decode(String.self, forKey: .text)
+        category = try c.decodeIfPresent(AnnotationCategory.self, forKey: .category) ?? .note
+        createdAt = try c.decode(Date.self, forKey: .createdAt)
     }
 }

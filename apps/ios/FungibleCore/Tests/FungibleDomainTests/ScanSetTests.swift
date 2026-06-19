@@ -57,4 +57,65 @@ final class ScanSetTests: XCTestCase {
         XCTAssertEqual(decoded.scanCount, 1)
         XCTAssertEqual(decoded.id, set.id)
     }
+
+    // MARK: - Editing & persisted UI state (ADR-0009)
+
+    func testUpsertMeasurementReplacesByID() {
+        var set = ScanSet()
+        let m = Measurement(kind: .distance, points: [.zero, Vector3(1, 0, 0)])
+        set.upsert(m)
+        set.upsert(m)   // same id → replace, never duplicate
+        XCTAssertEqual(set.measurements.count, 1)
+
+        var edited = m
+        edited.points = [.zero, Vector3(2, 0, 0)]
+        set.upsert(edited)
+        XCTAssertEqual(set.measurements.count, 1)
+        XCTAssertEqual(set.measurements.first?.polylineLength, 2, accuracy: 1e-9)
+
+        set.removeMeasurement(m.id)
+        XCTAssertTrue(set.measurements.isEmpty)
+    }
+
+    func testUpsertAnnotationCarriesCategoryAndRemoves() {
+        var set = ScanSet()
+        let a = Annotation(position: .zero, text: "Drainage", category: .issue)
+        set.upsert(a)
+        set.upsert(a)
+        XCTAssertEqual(set.annotations.count, 1)
+        XCTAssertEqual(set.annotations.first?.category, .issue)
+        set.removeAnnotation(a.id)
+        XCTAssertTrue(set.annotations.isEmpty)
+    }
+
+    func testTypeAndShareRoundTrip() throws {
+        let share = ShareSettings(isEnabled: true, allowDownload: true, expiry: .month, linkSlug: "7f3a")
+        let set = ScanSet(name: "S", type: .object, share: share)
+        let decoded = try JSONDecoder().decode(ScanSet.self, from: JSONEncoder().encode(set))
+        XCTAssertEqual(decoded.type, .object)
+        XCTAssertEqual(decoded.share, share)
+    }
+
+    /// A set written by an older build (no `type` / `share` / annotation
+    /// `category`) must still load, defaulting the new fields (ADR-0009).
+    func testTolerantDecodeDefaultsNewFields() throws {
+        let set = ScanSet(
+            name: "Legacy",
+            type: .interior,
+            annotations: [Annotation(position: .zero, text: "x", category: .issue)],
+            share: ShareSettings(isEnabled: true)
+        )
+        var obj = try JSONSerialization.jsonObject(with: JSONEncoder().encode(set)) as! [String: Any]
+        obj.removeValue(forKey: "type")
+        obj.removeValue(forKey: "share")
+        if var anns = obj["annotations"] as? [[String: Any]], !anns.isEmpty {
+            anns[0].removeValue(forKey: "category")
+            obj["annotations"] = anns
+        }
+        let stripped = try JSONSerialization.data(withJSONObject: obj)
+        let decoded = try JSONDecoder().decode(ScanSet.self, from: stripped)
+        XCTAssertEqual(decoded.type, .site)                        // defaulted
+        XCTAssertFalse(decoded.share.isEnabled)                    // defaulted
+        XCTAssertEqual(decoded.annotations.first?.category, .note) // defaulted
+    }
 }

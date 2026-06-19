@@ -1,11 +1,11 @@
 import Foundation
 import FungibleDomain
 
-// Display-side concepts the wireframes lean on that aren't (yet) persisted on
-// the domain structs. Kept here as pure, testable presentation types so the
-// SwiftUI screens bind to verified logic. Promoting `type`/`syncState` onto
-// `ScanSet` (and `category`/`photo` onto `Annotation`) in the domain model is a
-// follow-up that warrants its own ADR — these mirror what that model will hold.
+// Presentation layer for project state. The *data* now lives on the domain model
+// (`ScanSet.type`, `Annotation.category`, `ScanSet.share` — ADR-0009); this file
+// owns the *vocabulary*: the labels, glyphs, and per-market fact strings the
+// SwiftUI screens bind to. `SyncState` stays here because it's a runtime posture
+// derived from the `SyncProvider` (ADR-0003), not authored data on the set.
 
 /// Sync posture shown as a glyph on each project row. `localOnly` is a valid
 /// resting state, not an error — the app is local-first (ADR-0003).
@@ -38,15 +38,10 @@ public enum SyncState: String, Codable, Sendable, CaseIterable {
     public var isError: Bool { self == .needsAttention }
 }
 
-/// What kind of thing a project captures. Auto-detected from the first scan,
-/// user-overridable; it tunes vocabulary, the one contextual toolbar slot, and
-/// which facts a report computes — it does NOT fork the codebase (ADR-0007).
-public enum ProjectType: String, Codable, Sendable, CaseIterable {
-    case site       // open ground / earthwork / landscaping
-    case interior   // rooms, floors, walls (AEC)
-    case object     // a single thing scanned all around
-
-    public var chipLabel: String {
+/// Display vocabulary for `ProjectType` (the enum + `detect` live in
+/// `FungibleDomain`; this is the market-facing wording — ADR-0007/0009).
+public extension ProjectType {
+    var chipLabel: String {
         switch self {
         case .site:     return "Site"
         case .interior: return "Interior"
@@ -90,28 +85,6 @@ public enum ProjectType: String, Codable, Sendable, CaseIterable {
         case .interior: return ["Floor area", "Ceiling height", "Wall area", "Openings"]
         case .object:   return ["Height", "Max diameter", "Bounding box", "Coverage"]
         }
-    }
-
-    /// Heuristic auto-detection from a captured volume's bounding box. Open and
-    /// wide-but-shallow reads as a site; room-scale enclosure reads as interior;
-    /// small all-around reads as an object. A best-effort default the user can
-    /// override — never a hard classification.
-    public static func detect(bounds: BoundingBox) -> ProjectType {
-        let size = bounds.sizeMeters
-        let footprint = Double(size.x) * Double(size.z)   // ground extent (m²)
-        let height = Double(size.y)
-        let maxHorizontal = Double(max(size.x, size.z))
-
-        // Small in every dimension → a single object on a table/ground.
-        if maxHorizontal <= 2.0 && height <= 2.0 {
-            return .object
-        }
-        // Large ground footprint and relatively low → open site/terrain.
-        if footprint >= 100 && height < maxHorizontal {
-            return .site
-        }
-        // Otherwise room-scale: enclosed interior.
-        return .interior
     }
 }
 
@@ -174,15 +147,10 @@ public extension ScanStatus {
     var needsAttention: Bool { self == .failed }
 }
 
-/// A pinned-note category (screen 04). Display-side until the domain
-/// `Annotation` grows a category/photo (ADR follow-up).
-public enum AnnotationCategory: String, Codable, Sendable, CaseIterable {
-    case issue
-    case todo
-    case note
-    case spec
-
-    public var label: String {
+/// Display vocabulary for a pinned-note category (screen 04). The enum lives on
+/// the domain model (`Annotation.category` — ADR-0009); this is its wording/glyph.
+public extension AnnotationCategory {
+    var label: String {
         switch self {
         case .issue: return "Issue"
         case .todo:  return "To-do"

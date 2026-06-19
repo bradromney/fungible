@@ -61,38 +61,94 @@ public struct CoordinateReference: Equatable, Codable, Sendable {
     }
 }
 
+/// Device-authored share intent (screen 09, ADR-0009). The hosted link's live
+/// facts — view count, server-side expiry enforcement, the real URL — belong to
+/// the SyncProvider, not here; this persists only what the user chose so the
+/// toggles survive a reopen.
+public struct ShareSettings: Equatable, Codable, Sendable {
+    public enum Expiry: String, Codable, Sendable, CaseIterable {
+        case never, week, month
+    }
+    public var isEnabled: Bool
+    public var allowDownload: Bool
+    public var expiry: Expiry
+    /// Stable suffix of the minted link (e.g. "7f3a"); nil until first shared.
+    public var linkSlug: String?
+
+    public init(
+        isEnabled: Bool = false,
+        allowDownload: Bool = false,
+        expiry: Expiry = .never,
+        linkSlug: String? = nil
+    ) {
+        self.isEnabled = isEnabled
+        self.allowDownload = allowDownload
+        self.expiry = expiry
+        self.linkSlug = linkSlug
+    }
+}
+
 /// A site/project. Grows incrementally without a scan-count limit (ADR-0005).
 public struct ScanSet: Identifiable, Equatable, Codable, Sendable {
     public let id: ScanSetID
     public var name: String
     public var createdAt: Date
+    /// What this project captures — tunes vocabulary + one tool slot (ADR-0007).
+    public var type: ProjectType
     public var regionOfInterest: RegionOfInterest?
     public var crs: CoordinateReference?
     public var poseGraph: PoseGraph
     public var scans: [Scan]
     public var measurements: [Measurement]
     public var annotations: [Annotation]
+    /// Device-authored web-share intent (ADR-0009).
+    public var share: ShareSettings
 
     public init(
         id: ScanSetID = ScanSetID(),
         name: String = "Untitled Site",
         createdAt: Date = Date(),
+        type: ProjectType = .site,
         regionOfInterest: RegionOfInterest? = nil,
         crs: CoordinateReference? = nil,
         poseGraph: PoseGraph = PoseGraph(),
         scans: [Scan] = [],
         measurements: [Measurement] = [],
-        annotations: [Annotation] = []
+        annotations: [Annotation] = [],
+        share: ShareSettings = ShareSettings()
     ) {
         self.id = id
         self.name = name
         self.createdAt = createdAt
+        self.type = type
         self.regionOfInterest = regionOfInterest
         self.crs = crs
         self.poseGraph = poseGraph
         self.scans = scans
         self.measurements = measurements
         self.annotations = annotations
+        self.share = share
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, createdAt, type, regionOfInterest, crs, poseGraph, scans, measurements, annotations, share
+    }
+
+    // Tolerant decode (ADR-0009): a set written before `type`/`share` existed
+    // loads with sensible defaults rather than failing the whole catalog.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(ScanSetID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        createdAt = try c.decode(Date.self, forKey: .createdAt)
+        type = try c.decodeIfPresent(ProjectType.self, forKey: .type) ?? .site
+        regionOfInterest = try c.decodeIfPresent(RegionOfInterest.self, forKey: .regionOfInterest)
+        crs = try c.decodeIfPresent(CoordinateReference.self, forKey: .crs)
+        poseGraph = try c.decode(PoseGraph.self, forKey: .poseGraph)
+        scans = try c.decode([Scan].self, forKey: .scans)
+        measurements = try c.decode([Measurement].self, forKey: .measurements)
+        annotations = try c.decode([Annotation].self, forKey: .annotations)
+        share = try c.decodeIfPresent(ShareSettings.self, forKey: .share) ?? ShareSettings()
     }
 
     public var scanCount: Int { scans.count }
@@ -104,6 +160,37 @@ public struct ScanSet: Identifiable, Equatable, Codable, Sendable {
     public mutating func append(_ scan: Scan) {
         scans.append(scan)
         poseGraph.addNode(scan.id)
+    }
+
+    // MARK: - Editing (ADR-0009)
+    // Small, pure mutations the editor screens drive through the view-model,
+    // which then writes the set back to the store. Upserts replace by id so a
+    // re-saved edit doesn't duplicate.
+
+    /// Add a measurement, or replace the existing one with the same id.
+    public mutating func upsert(_ measurement: Measurement) {
+        if let i = measurements.firstIndex(where: { $0.id == measurement.id }) {
+            measurements[i] = measurement
+        } else {
+            measurements.append(measurement)
+        }
+    }
+
+    public mutating func removeMeasurement(_ id: MeasurementID) {
+        measurements.removeAll { $0.id == id }
+    }
+
+    /// Add an annotation, or replace the existing one with the same id.
+    public mutating func upsert(_ annotation: Annotation) {
+        if let i = annotations.firstIndex(where: { $0.id == annotation.id }) {
+            annotations[i] = annotation
+        } else {
+            annotations.append(annotation)
+        }
+    }
+
+    public mutating func removeAnnotation(_ id: AnnotationID) {
+        annotations.removeAll { $0.id == id }
     }
 
     /// Aggregate coverage across the set, clamped to [0,1].
