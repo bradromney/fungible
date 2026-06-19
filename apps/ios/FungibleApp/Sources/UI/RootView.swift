@@ -20,7 +20,7 @@ struct RootView: View {
             ProjectsHomeView(viewModel: projects, onNewScan: { showCapture = true })
                 .navigationDestination(for: ScanSetID.self) { id in
                     if let set = projects.set(for: id) {
-                        ProjectDetailView(set: set)
+                        ProjectDetailView(viewModel: projects, initialSet: set)
                     } else {
                         Text("Project not found").foregroundStyle(.secondary)
                     }

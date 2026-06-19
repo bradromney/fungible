@@ -42,6 +42,24 @@ final class ProjectsViewModel: ObservableObject {
 
     func set(for id: ScanSetID) -> ScanSet? { sets.first { $0.id == id } }
 
+    // MARK: - Editing (ADR-0009)
+    // The editor screens hand results back here; we mutate the in-memory set
+    // (so any open detail re-renders) and persist it through the local-first
+    // store. Mutating in place keeps `rows` and the detail view in sync.
+
+    /// Apply a pure mutation to the set with `id`, then save it.
+    func update(_ id: ScanSetID, _ mutate: (inout ScanSet) -> Void) {
+        guard let i = sets.firstIndex(where: { $0.id == id }) else { return }
+        mutate(&sets[i])
+        let snapshot = sets[i]
+        Task { try? await store.save(snapshot) }
+    }
+
+    func addMeasurement(_ m: Measurement, to id: ScanSetID) { update(id) { $0.upsert(m) } }
+    func addAnnotation(_ a: Annotation, to id: ScanSetID) { update(id) { $0.upsert(a) } }
+    func setType(_ type: ProjectType, for id: ScanSetID) { update(id) { $0.type = type } }
+    func updateShare(_ share: ShareSettings, for id: ScanSetID) { update(id) { $0.share = share } }
+
     // MARK: - Filtering & sorting (pure)
 
     private var visibleSets: [ScanSet] {

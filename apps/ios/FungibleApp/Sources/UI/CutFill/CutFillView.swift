@@ -13,6 +13,8 @@ import FungiblePresentation
 /// recomputes against it. `project` (not `set`) to avoid the `set`-keyword trap.
 struct CutFillView: View {
     let project: ScanSet
+    /// Persist the computed result as a `volumeCutFill` measurement (ADR-0009).
+    var onSave: (FungibleDomain.Measurement) -> Void = { _ in }
     @Environment(\.dismiss) private var dismiss
 
     enum Step { case surface, grade, map }
@@ -165,7 +167,7 @@ struct CutFillView: View {
                     }
                     .font(.caption2).foregroundStyle(.secondary)
                 }
-                Button { step = .map } label: { Label("Save result", systemImage: "tray.and.arrow.down") }
+                Button { saveResult(); step = .map } label: { Label("Save result", systemImage: "tray.and.arrow.down") }
                     .font(.subheadline)
             }
             .padding()
@@ -267,6 +269,17 @@ struct CutFillView: View {
                 .foregroundStyle(.white)
         }
         .padding()
+    }
+
+    /// Persist the live cut/fill result as a labeled `volumeCutFill` measurement.
+    /// `Measurement` carries geometry + a label (not volumes), so the headline
+    /// numbers ride in the label until a richer result type lands.
+    private func saveResult() {
+        let net = result.netVolume
+        let netYd = Int(Units.cubicYards(abs(net)).rounded())
+        let label = "Net \(netYd) yd³ \(net < 0 ? "cut" : "fill") @ "
+            + String(format: "%+.2f ft", Units.feet(gradeY))
+        onSave(FungibleDomain.Measurement(kind: .volumeCutFill, points: [], label: label))
     }
 
     // MARK: - Synthetic terrain

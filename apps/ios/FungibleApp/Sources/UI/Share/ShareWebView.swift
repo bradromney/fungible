@@ -12,19 +12,55 @@ import FungibleDomain
 /// link is generated locally and handed off via the native share sheet.
 struct ShareWebView: View {
     let project: ScanSet
+    /// Persist the device-authored share intent (ADR-0009); the detail
+    /// view-model writes it onto `ScanSet.share`.
+    var onUpdate: (ShareSettings) -> Void = { _ in }
     @Environment(\.dismiss) private var dismiss
 
-    @State private var created = false
+    @State private var created: Bool
     @State private var anyoneWithLink = true
-    @State private var allowDownload = false
-    @State private var expiry: Expiry = .never
+    @State private var allowDownload: Bool
+    @State private var expiry: Expiry
     @State private var views = 0
-    @State private var suffix = String(UUID().uuidString.prefix(4)).lowercased()
+    @State private var suffix: String
 
     enum Expiry: String, CaseIterable, Identifiable {
         case never = "Never", week = "In 7 days", month = "In 30 days"
         var id: String { rawValue }
+
+        init(_ domain: ShareSettings.Expiry) {
+            switch domain {
+            case .never: self = .never
+            case .week:  self = .week
+            case .month: self = .month
+            }
+        }
+        var domain: ShareSettings.Expiry {
+            switch self {
+            case .never: return .never
+            case .week:  return .week
+            case .month: return .month
+            }
+        }
     }
+
+    init(project: ScanSet, onUpdate: @escaping (ShareSettings) -> Void = { _ in }) {
+        self.project = project
+        self.onUpdate = onUpdate
+        let s = project.share
+        _created = State(initialValue: s.isEnabled)
+        _allowDownload = State(initialValue: s.allowDownload)
+        _expiry = State(initialValue: Expiry(s.expiry))
+        _suffix = State(initialValue: s.linkSlug ?? String(UUID().uuidString.prefix(4)).lowercased())
+    }
+
+    /// Current settings reflecting the live toggles; `linkSlug` is set only once
+    /// the link is live so revoking clears it.
+    private var settings: ShareSettings {
+        ShareSettings(isEnabled: created, allowDownload: allowDownload,
+                      expiry: expiry.domain, linkSlug: created ? suffix : nil)
+    }
+    private func persist() { onUpdate(settings) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -41,6 +77,12 @@ struct ShareWebView: View {
             }
             bottomBar
         }
+        // Persist the device-authored intent whenever it changes (ADR-0009).
+        // `anyoneWithLink` is view-only sugar and isn't part of ShareSettings.
+        .onChange(of: created) { _ in persist() }
+        .onChange(of: allowDownload) { _ in persist() }
+        .onChange(of: expiry) { _ in persist() }
+        .onChange(of: suffix) { _ in persist() }
     }
 
     private var header: some View {

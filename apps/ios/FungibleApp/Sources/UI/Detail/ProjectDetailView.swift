@@ -8,12 +8,14 @@ import FungiblePresentation
 /// over the project's real `Scan` data. Measure / Export / Cut-Fill / Report /
 /// Share open from the toolbar (built out screen-by-screen).
 struct ProjectDetailView: View {
-    let set: ScanSet
+    /// The project is owned by the view-model and persisted through the store
+    /// (ADR-0009). We read the live set by id so edits made in the editor sheets
+    /// round-trip and re-render here; `initialSet` is the navigation snapshot and
+    /// a safe fallback if the catalog reloads.
+    @ObservedObject var viewModel: ProjectsViewModel
+    let initialSet: ScanSet
+    private var set: ScanSet { viewModel.set(for: initialSet.id) ?? initialSet }
 
-    /// Auto-detected from the first scan's geometry on device; user-overridable.
-    /// Until point bounds are loaded here, it defaults to `.site` and can be
-    /// changed from the type menu — it only tunes vocabulary + one tool slot.
-    @State private var projectType: ProjectType = .site
     @State private var tab: Tab = .passes
     @State private var showExport = false
     @State private var showReport = false
@@ -47,9 +49,19 @@ struct ProjectDetailView: View {
         }
         .sheet(isPresented: $showExport) { ExportSheet(set: set) }
         .sheet(isPresented: $showReport) { NavigationStack { SiteReportView(set: set) } }
-        .sheet(isPresented: $showCutFill) { CutFillView(project: set) }
-        .sheet(isPresented: $showShare) { ShareWebView(project: set) }
-        .fullScreenCover(item: $measureMode) { MeasureAnnotateView(initialMode: $0) }
+        .sheet(isPresented: $showCutFill) {
+            CutFillView(project: set) { viewModel.addMeasurement($0, to: set.id) }
+        }
+        .sheet(isPresented: $showShare) {
+            ShareWebView(project: set) { viewModel.updateShare($0, for: set.id) }
+        }
+        .fullScreenCover(item: $measureMode) { mode in
+            MeasureAnnotateView(
+                initialMode: mode,
+                onSaveMeasurement: { viewModel.addMeasurement($0, to: set.id) },
+                onSaveAnnotation: { viewModel.addAnnotation($0, to: set.id) }
+            )
+        }
     }
 
     // MARK: - Viewer placeholder
@@ -85,8 +97,8 @@ struct ProjectDetailView: View {
                 action("Annotate", "mappin.and.ellipse", softPro: false) { measureMode = .annotate }
                 action("Export", "square.and.arrow.up", softPro: true) { showExport = true }
                 // Contextual slot — Cut/Fill for site, Floorplan for interior, Mesh for object.
-                action(projectType.contextualToolLabel, projectType.contextualToolSymbol, softPro: true) {
-                    if projectType == .site { showCutFill = true }
+                action(set.type.contextualToolLabel, set.type.contextualToolSymbol, softPro: true) {
+                    if set.type == .site { showCutFill = true }
                 }
                 action("Share", "link", softPro: true) { showShare = true }
                 action("Report", "doc.text", softPro: true) { showReport = true }
@@ -166,15 +178,15 @@ struct ProjectDetailView: View {
             // with the vocabulary switching on project type (ADR-0007). The
             // values come from the same cloud; geometry-derived ones need capture.
             VStack(alignment: .leading, spacing: 10) {
-                Text(projectType.factsSectionTitle.uppercased())
+                Text(set.type.factsSectionTitle.uppercased())
                     .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                ForEach(projectType.factLabels, id: \.self) { label in
+                ForEach(set.type.factLabels, id: \.self) { label in
                     detailRow(label, marketFactValue(for: label))
                 }
             }
             Divider()
             VStack(alignment: .leading, spacing: 14) {
-                detailRow("Project type", projectType.chipLabel)
+                detailRow("Project type", set.type.chipLabel)
                 detailRow("Passes", DisplayFormat.passCount(set.scanCount))
                 detailRow("Measurements", "\(set.measurements.count)")
                 detailRow("Annotations", "\(set.annotations.count)")
@@ -209,13 +221,17 @@ struct ProjectDetailView: View {
         .font(.subheadline)
     }
 
+    private var typeBinding: Binding<ProjectType> {
+        Binding(get: { set.type }, set: { viewModel.setType($0, for: set.id) })
+    }
+
     private var typeMenu: some View {
         Menu {
-            Picker("Project type", selection: $projectType) {
+            Picker("Project type", selection: typeBinding) {
                 ForEach(ProjectType.allCases, id: \.self) { Text($0.chipLabel).tag($0) }
             }
         } label: {
-            Text(projectType.chipLabel).font(.subheadline)
+            Text(set.type.chipLabel).font(.subheadline)
         }
     }
 }

@@ -9,9 +9,9 @@ import FungiblePresentation
 /// On device, taps hit-test against the live Metal point cloud. Here (no device)
 /// taps map to synthetic world points at a fixed scale chosen so the readouts
 /// reproduce the wireframe's numbers — the measurement math itself is the real
-/// `Measurement` geometry from FungibleDomain. Persisting saves to the store is
-/// the next integration (needs a ProjectDetail view model); for now Save records
-/// to local session state and confirms "Pinned to project".
+/// `Measurement` geometry from FungibleDomain. Saving emits a real domain
+/// `Measurement`/`Annotation` via callbacks; the detail view-model upserts it
+/// onto the `ScanSet` and persists through the local-first store (ADR-0009).
 struct MeasureAnnotateView: View {
     enum Mode: String, CaseIterable, Identifiable {
         case distance, area, volume, annotate
@@ -27,6 +27,12 @@ struct MeasureAnnotateView: View {
     }
 
     @Environment(\.dismiss) private var dismiss
+
+    /// Persist callbacks (ADR-0009). The detail view routes these into the
+    /// view-model, which upserts onto the `ScanSet` and saves through the store.
+    let onSaveMeasurement: (FungibleDomain.Measurement) -> Void
+    let onSaveAnnotation: (Annotation) -> Void
+
     @State private var mode: Mode
     @State private var tapLocations: [CGPoint] = []
     @State private var pins: [PinItem] = []
@@ -42,7 +48,15 @@ struct MeasureAnnotateView: View {
 
     struct PinItem: Identifiable { let id = UUID(); let location: CGPoint; let number: Int }
 
-    init(initialMode: Mode) { _mode = State(initialValue: initialMode) }
+    init(
+        initialMode: Mode,
+        onSaveMeasurement: @escaping (FungibleDomain.Measurement) -> Void = { _ in },
+        onSaveAnnotation: @escaping (Annotation) -> Void = { _ in }
+    ) {
+        _mode = State(initialValue: initialMode)
+        self.onSaveMeasurement = onSaveMeasurement
+        self.onSaveAnnotation = onSaveAnnotation
+    }
 
     // MARK: Derived geometry (real Measurement math)
 
@@ -297,11 +311,18 @@ struct MeasureAnnotateView: View {
         hasPhoto = false
     }
 
-    /// Records the measurement/annotation for this session. Persisting to the
-    /// ScanSet via the store is the next integration step.
+    /// Emits the measurement/annotation as a real domain object; the detail
+    /// view-model upserts it onto the `ScanSet` and persists (ADR-0009).
     private func save() {
-        if mode == .annotate, let draftPin {
+        switch mode {
+        case .annotate:
+            guard let draftPin else { return }
+            let world = Vector3(Double(draftPin.x) * scale, 0, Double(draftPin.y) * scale)
+            onSaveAnnotation(Annotation(position: world, text: noteText, category: category))
             pins.append(PinItem(location: draftPin, number: pins.count + 1))
+        default:
+            guard hasEnoughPoints else { return }
+            onSaveMeasurement(measurement)
         }
         savedCount += 1
         resetInputs()

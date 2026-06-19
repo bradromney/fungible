@@ -71,7 +71,7 @@ final class ScanSetTests: XCTestCase {
         edited.points = [.zero, Vector3(2, 0, 0)]
         set.upsert(edited)
         XCTAssertEqual(set.measurements.count, 1)
-        XCTAssertEqual(set.measurements.first?.polylineLength, 2, accuracy: 1e-9)
+        XCTAssertEqual(set.measurements.first!.polylineLength, 2, accuracy: 1e-9)
 
         set.removeMeasurement(m.id)
         XCTAssertTrue(set.measurements.isEmpty)
