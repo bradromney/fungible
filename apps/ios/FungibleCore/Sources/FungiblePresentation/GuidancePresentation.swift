@@ -1,4 +1,5 @@
 import Foundation
+import FungibleDomain
 import FungibleGuidance
 
 // Presentation mapping for live-capture coaching. The SF Symbol per prompt and
@@ -28,5 +29,30 @@ public enum GuidancePresentation {
     public static func displayed(_ prompts: [Prompt]) -> (primary: Prompt?, secondary: Prompt?) {
         let top = Array(prompts.prefix(2))
         return (top.first, top.count > 1 ? top[1] : nil)
+    }
+
+    /// How a prompt should read: a finished area is reassuring (green), a tracking
+    /// or motion problem is a call to act, everything else is neutral coaching.
+    /// Drives the overlay's colour without baking SwiftUI into the engine.
+    public enum Tone: Equatable, Sendable { case normal, urgent, positive }
+
+    public static func tone(for prompt: Prompt) -> Tone {
+        switch prompt.kind {
+        case .coverageComplete:
+            return .positive
+        case .slowDown, .holdSteady, .improveLighting, .rescanLowConfidence:
+            return .urgent
+        case .moveCloser, .fillGap:
+            return .normal
+        }
+    }
+
+    /// Screen heading (radians, clockwise from straight-up) for a fill-gap arrow,
+    /// from the gap's world direction. Maps the horizontal plane: forward (−Z) is
+    /// up/0, right (+X) is +π/2. A rotation applied to an upward-pointing arrow so
+    /// it points the user toward the uncovered area. Honest — the direction comes
+    /// from the engine's `Prompt.direction`, not a guess.
+    public static func headingRadians(forGapDirection dir: Vector3) -> Double {
+        atan2(Double(dir.x), -Double(dir.z))
     }
 }

@@ -44,6 +44,7 @@ struct CaptureView: View {
                     .background(.ultraThinMaterial, in: Circle())
             }
             .foregroundStyle(.primary)
+            .accessibilityLabel("Cancel capture")
 
             Label(DisplayFormat.pointCountLabel(viewModel.pointCount), systemImage: "circle.grid.3x3.fill")
                 .font(.subheadline.monospacedDigit())

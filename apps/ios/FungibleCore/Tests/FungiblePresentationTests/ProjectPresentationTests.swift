@@ -138,6 +138,19 @@ final class GuidancePresentationTests: XCTestCase {
         XCTAssertEqual(single.primary, one)
         XCTAssertNil(single.secondary)
     }
+
+    func testToneClassifiesPrompts() {
+        XCTAssertEqual(GuidancePresentation.tone(for: Prompt(kind: .coverageComplete, message: "", severity: 40)), .positive)
+        XCTAssertEqual(GuidancePresentation.tone(for: Prompt(kind: .slowDown, message: "", severity: 90)), .urgent)
+        XCTAssertEqual(GuidancePresentation.tone(for: Prompt(kind: .fillGap, message: "", severity: 45)), .normal)
+    }
+
+    func testGapHeadingMapsWorldDirectionToScreenAngle() {
+        // Forward (−Z) reads as straight up (0); right (+X) as +π/2; back as ±π.
+        XCTAssertEqual(GuidancePresentation.headingRadians(forGapDirection: Vector3(0, 0, -1)), 0, accuracy: 1e-9)
+        XCTAssertEqual(GuidancePresentation.headingRadians(forGapDirection: Vector3(1, 0, 0)), .pi / 2, accuracy: 1e-9)
+        XCTAssertEqual(abs(GuidancePresentation.headingRadians(forGapDirection: Vector3(0, 0, 1))), .pi, accuracy: 1e-9)
+    }
 }
 
 final class ExportCatalogTests: XCTestCase {

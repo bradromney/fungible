@@ -148,6 +148,7 @@ struct MeasureAnnotateView: View {
         VStack(spacing: 10) {
             HStack {
                 Button { dismiss() } label: { Image(systemName: "xmark") }
+                    .accessibilityLabel("Close")
                 Spacer()
                 if savedCount > 0 {
                     Label("\(savedCount)", systemImage: "checkmark.seal")

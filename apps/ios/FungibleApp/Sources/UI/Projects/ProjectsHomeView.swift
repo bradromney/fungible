@@ -13,7 +13,9 @@ struct ProjectsHomeView: View {
 
     var body: some View {
         Group {
-            if viewModel.isEmpty && !viewModel.isLoading {
+            if viewModel.isLoading && viewModel.isEmpty {
+                loadingState
+            } else if viewModel.isEmpty {
                 emptyState
             } else {
                 projectList
@@ -27,6 +29,7 @@ struct ProjectsHomeView: View {
                 } label: {
                     Image(systemName: "gearshape")
                 }
+                .accessibilityLabel("Settings")
             }
         }
         .safeAreaInset(edge: .bottom) { newScanButton }
@@ -48,6 +51,31 @@ struct ProjectsHomeView: View {
         }
         .listStyle(.plain)
         .searchable(text: $viewModel.searchText, prompt: "Search projects")
+        .overlay {
+            if viewModel.rows.isEmpty && !viewModel.searchText.isEmpty {
+                noMatches
+            }
+        }
+    }
+
+    // MARK: - Loading & no-results
+
+    private var loadingState: some View {
+        ProgressView("Loading projects…")
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var noMatches: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 40, weight: .light))
+                .foregroundStyle(.secondary)
+            Text("No projects match \u{201C}\(viewModel.searchText)\u{201D}")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+        }
     }
 
     private var sortRow: some View {
