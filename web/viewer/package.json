@@ -13,6 +13,7 @@
   "dependencies": {
     "@loaders.gl/core": "^4.2.0",
     "@loaders.gl/las": "^4.2.0",
+    "@math.gl/types": "^4.1.0",
     "three": "^0.160.1"
   },
   "devDependencies": {
