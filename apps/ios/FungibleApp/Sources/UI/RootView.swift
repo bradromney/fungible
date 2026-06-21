@@ -26,7 +26,12 @@ struct RootView: View {
                     }
                 }
         }
-        .task { await projects.load() }
+        .task {
+            #if DEBUG
+            await DemoSeed.seedIfEmpty(projects.store)
+            #endif
+            await projects.load()
+        }
         .fullScreenCover(isPresented: $showCapture, onDismiss: {
             Task { await projects.load() }
         }) {
