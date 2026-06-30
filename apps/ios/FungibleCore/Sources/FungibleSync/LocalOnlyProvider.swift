@@ -7,16 +7,13 @@ import FungibleDomain
 /// rest of the app written against `SyncProvider` even with no cloud configured.
 public struct LocalOnlyProvider: SyncProvider {
     public let backend: SyncBackend = .localOnly
-    private let fileManager: FileManager
 
-    public init(fileManager: FileManager = .default) {
-        self.fileManager = fileManager
-    }
+    public init() {}
 
     public var isReady: Bool { get async { true } }
 
     public func upload(_ blob: SyncableBlob, progress: @Sendable @escaping (Double) -> Void) async throws -> RemoteRef {
-        guard fileManager.fileExists(atPath: blob.localPath) else {
+        guard FileManager.default.fileExists(atPath: blob.localPath) else {
             throw SyncError.notFound
         }
         progress(1.0)
@@ -26,7 +23,7 @@ public struct LocalOnlyProvider: SyncProvider {
 
     public func download(_ ref: RemoteRef, to localPath: String, progress: @Sendable @escaping (Double) -> Void) async throws {
         // Local-only data is already present; nothing to fetch.
-        guard fileManager.fileExists(atPath: localPath) else {
+        guard FileManager.default.fileExists(atPath: localPath) else {
             throw SyncError.notFound
         }
         progress(1.0)

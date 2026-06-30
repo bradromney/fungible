@@ -51,7 +51,7 @@ public extension ProjectType {
 
     /// The single contextual action that swaps per type; the rest of the
     /// toolbar (Measure/Annotate/Export/Report) is constant across markets.
-    public var contextualToolLabel: String {
+    var contextualToolLabel: String {
         switch self {
         case .site:     return "Cut/Fill"
         case .interior: return "Floorplan"
@@ -59,7 +59,7 @@ public extension ProjectType {
         }
     }
 
-    public var contextualToolSymbol: String {
+    var contextualToolSymbol: String {
         switch self {
         case .site:     return "mountain.2"
         case .interior: return "square.split.bottomrightquarter"
@@ -69,7 +69,7 @@ public extension ProjectType {
 
     /// Section title for the market-specific facts (ADR-0007: same screen,
     /// different vocabulary — never a fork).
-    public var factsSectionTitle: String {
+    var factsSectionTitle: String {
         switch self {
         case .site:     return "Site facts"
         case .interior: return "Room facts"
@@ -79,7 +79,7 @@ public extension ProjectType {
 
     /// The ordered fact labels a report/detail leads with, per market. The same
     /// cloud feeds all of them; only the framing changes.
-    public var factLabels: [String] {
+    var factLabels: [String] {
         switch self {
         case .site:     return ["Plan area", "Elevation range", "Net cut @ grade", "Avg slope"]
         case .interior: return ["Floor area", "Ceiling height", "Wall area", "Openings"]
@@ -159,7 +159,7 @@ public extension AnnotationCategory {
         }
     }
 
-    public var symbolName: String {
+    var symbolName: String {
         switch self {
         case .issue: return "exclamationmark.triangle"
         case .todo:  return "checklist"
