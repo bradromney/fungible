@@ -1,5 +1,6 @@
 import SwiftUI
 import FungibleDomain
+import FungibleStorage
 import FungiblePresentation
 
 /// Screen 03 — Project Detail / 3D viewer (shell). The orbitable combined point
@@ -68,10 +69,9 @@ struct ProjectDetailView: View {
 
     private var viewer: some View {
         ZStack {
-            Rectangle().fill(Color(white: 0.12))
-            Image(systemName: "circle.grid.3x3.fill")
-                .font(.system(size: 64))
-                .foregroundStyle(.white.opacity(0.4))
+            // Live, orbitable point cloud rendered with Metal (replaces the
+            // placeholder). Loads the project's blobs from the store.
+            ProjectCloudViewer(scans: set.scans, store: viewModel.store)
             // Non-blocking background-registration banner (ADR-0005).
             if let registering = set.scans.firstIndex(where: { $0.status.isInProgress }) {
                 VStack {
