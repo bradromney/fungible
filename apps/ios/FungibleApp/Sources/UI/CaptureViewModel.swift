@@ -24,6 +24,10 @@ final class CaptureViewModel: ObservableObject {
     @Published private(set) var statusMessage: String?
     /// The project growing across this capture session's passes.
     @Published private(set) var project: ScanSet?
+    /// Snapshot of the accumulating cloud for the live overlay (Phase 2),
+    /// rebuilt off-main on a throttle. Shows the CURRENT pass; saved passes
+    /// appear merged in the project viewer.
+    @Published private(set) var liveGeometry: CloudGeometry = .empty
 
     let session = ARDepthCaptureSession()
 
@@ -39,6 +43,11 @@ final class CaptureViewModel: ObservableObject {
     /// without re-reading blobs.
     private var previousPass: (id: ScanID, samples: PointSample)?
     private var hasStartedSession = false
+    private var lastPreviewAt: TimeInterval = 0
+    /// Live-overlay rebuild cadence + point cap (full re-upload per snapshot;
+    /// incremental GPU updates are the Phase 4 optimization).
+    private static let previewInterval: TimeInterval = 0.8
+    private static let previewMaxPoints = 600_000
 
     /// Below this inlier fraction, ICP's answer is less trustworthy than the
     /// shared-session ARKit prior — keep the prior instead of a bad "fix".
@@ -52,6 +61,8 @@ final class CaptureViewModel: ObservableObject {
         accumulator.removeAll()
         pointCount = 0
         statusMessage = nil
+        liveGeometry = .empty
+        lastPreviewAt = 0
         session.onFrame = { [weak self] frame in
             // ARSession delivers delegate callbacks on the main thread; hop onto
             // the main actor (iOS 16-compatible, no assumeIsolated).
@@ -76,6 +87,21 @@ final class CaptureViewModel: ObservableObject {
         let speed = estimateSpeed(frame)
         let signals = CaptureSignalsBuilder.build(frame: frame, deviceSpeed: speed)
         prompts = guidance.evaluate(signals: signals, coverage: 0, roi: nil)
+
+        // Throttled live-overlay snapshot: copy the accumulator (COW — cheap)
+        // and build renderable geometry off the main actor.
+        if frame.timestamp - lastPreviewAt > Self.previewInterval, accumulator.count > 0 {
+            lastPreviewAt = frame.timestamp
+            let snapshot = accumulator
+            let cap = Self.previewMaxPoints
+            Task.detached(priority: .utility) { [weak self, snapshot] in
+                let geo = PointCloudLoader.geometry(from: snapshot.points(), maxPoints: cap)
+                await MainActor.run { [weak self] in
+                    guard let self, self.isCapturing else { return }
+                    self.liveGeometry = geo
+                }
+            }
+        }
     }
 
     private func estimateSpeed(_ frame: DepthFrameData) -> Double {

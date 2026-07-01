@@ -20,7 +20,7 @@ public struct VoxelKey: Hashable, Sendable {
     }
 }
 
-public struct VoxelAccumulator {
+public struct VoxelAccumulator: Sendable {
     public let voxelSize: Double
     public let capacity: Int
     private var cells: [VoxelKey: CapturedPoint]

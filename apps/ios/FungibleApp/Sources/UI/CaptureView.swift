@@ -22,6 +22,13 @@ struct CaptureView: View {
             ARViewContainer(session: viewModel.session)
                 .ignoresSafeArea()
 
+            // Live cloud painted over the camera feed, locked to the world —
+            // the "watch the scan build" layer (Phase 2).
+            LiveCloudOverlayView(arSession: viewModel.session.session,
+                                 geometry: viewModel.liveGeometry)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
             VStack {
                 topBar
                 Spacer()

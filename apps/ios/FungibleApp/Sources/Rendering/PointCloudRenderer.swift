@@ -19,6 +19,13 @@ final class PointCloudRenderer: NSObject, MTKViewDelegate {
     var elevation: Float = .pi * 0.18
     var distance: Float = 3
 
+    /// Live-AR mode: when set, draw() uses this MVP (the AR camera, computed per
+    /// frame from aspect + drawable size) instead of the orbit camera. Returning
+    /// nil (e.g. tracking not ready) skips the point draw for that frame.
+    var mvpProvider: ((_ aspect: Float, _ drawableSize: CGSize) -> simd_float4x4?)?
+    /// Screen-space sprite size; the live overlay uses a smaller dot.
+    var pointSize: Float = 7
+
     private var target: SIMD3<Float> = .zero
     private var radius: Float = 1
     private var aspect: Float = 1
@@ -73,8 +80,14 @@ final class PointCloudRenderer: NSObject, MTKViewDelegate {
               let cmd = commandQueue.makeCommandBuffer(),
               let enc = cmd.makeRenderCommandEncoder(descriptor: rpd) else { return }
 
-        if let buffer = vertexBuffer, vertexCount > 0 {
-            var uniforms = PCUniforms(mvp: mvp(), pointSize: 7)
+        let matrix: simd_float4x4?
+        if let provider = mvpProvider {
+            matrix = provider(aspect, view.drawableSize)   // nil → skip this frame
+        } else {
+            matrix = mvp()
+        }
+        if let matrix, let buffer = vertexBuffer, vertexCount > 0 {
+            var uniforms = PCUniforms(mvp: matrix, pointSize: pointSize)
             enc.setRenderPipelineState(pipeline)
             enc.setDepthStencilState(depthState)
             enc.setVertexBuffer(buffer, offset: 0, index: 0)
