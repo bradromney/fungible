@@ -21,21 +21,25 @@ public struct ScanSetAssembler {
     public func assemble(
         _ set: ScanSet,
         voxelSize: Double? = nil,
-        capacity: Int = 20_000_000
+        capacity: Int = 20_000_000,
+        includeHidden: Bool = false
     ) async throws -> [CapturedPoint] {
+        // Compose from the visible scans only (ADR-0010) unless the caller asks
+        // for everything — hiding a scan simply drops it from the union.
+        let scans = includeHidden ? set.scans : set.visibleScans
         if let voxelSize {
             var acc = VoxelAccumulator(voxelSize: voxelSize, capacity: capacity)
-            try await forEachWorldPoint(in: set) { acc.insert($0) }
+            try await forEachWorldPoint(in: scans) { acc.insert($0) }
             return acc.points()
         } else {
             var all: [CapturedPoint] = []
-            try await forEachWorldPoint(in: set) { all.append($0) }
+            try await forEachWorldPoint(in: scans) { all.append($0) }
             return all
         }
     }
 
-    private func forEachWorldPoint(in set: ScanSet, _ body: (CapturedPoint) -> Void) async throws {
-        for scan in set.scans {
+    private func forEachWorldPoint(in scans: [Scan], _ body: (CapturedPoint) -> Void) async throws {
+        for scan in scans {
             let points = try await store.readBlob(scan.pointCloud)
             for p in points {
                 body(CapturedPoint(

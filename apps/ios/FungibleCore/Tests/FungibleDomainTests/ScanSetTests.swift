@@ -118,4 +118,54 @@ final class ScanSetTests: XCTestCase {
         XCTAssertFalse(decoded.share.isEnabled)                    // defaulted
         XCTAssertEqual(decoded.annotations.first?.category, .note) // defaulted
     }
+
+    // MARK: - Reversible multi-scan composition (ADR-0010)
+
+    func testHideScanIsReversibleAndExcludesFromVisible() {
+        var set = ScanSet()
+        let a = Scan(), b = Scan()
+        set.append(a); set.append(b)
+        XCTAssertEqual(set.visibleScans.count, 2)
+
+        set.setScan(b.id, hidden: true)
+        XCTAssertFalse(set.isVisible(b.id))
+        XCTAssertEqual(set.visibleScans.map(\.id), [a.id])
+        XCTAssertEqual(set.scanCount, 2, "hiding is non-destructive — the scan stays")
+
+        set.setScan(b.id, hidden: false)
+        XCTAssertTrue(set.isVisible(b.id))
+        XCTAssertEqual(set.visibleScans.count, 2)
+    }
+
+    func testSetScanIgnoresUnknownID() {
+        var set = ScanSet()
+        set.append(Scan())
+        set.setScan(ScanID(), hidden: true)
+        XCTAssertTrue(set.hiddenScans.isEmpty)
+    }
+
+    func testHiddenScansRoundTripAndLegacyDecodeDefaultsEmpty() throws {
+        var set = ScanSet(name: "H")
+        let a = Scan(); set.append(a)
+        set.setScan(a.id, hidden: true)
+        let decoded = try JSONDecoder().decode(ScanSet.self, from: JSONEncoder().encode(set))
+        XCTAssertEqual(decoded.hiddenScans, [a.id])
+
+        var obj = try JSONSerialization.jsonObject(with: JSONEncoder().encode(set)) as! [String: Any]
+        obj.removeValue(forKey: "hiddenScans")
+        let stripped = try JSONSerialization.data(withJSONObject: obj)
+        XCTAssertTrue(try JSONDecoder().decode(ScanSet.self, from: stripped).hiddenScans.isEmpty)
+    }
+
+    func testSplitExtractsSubsetKeepingPosesAndLeavesOriginalIntact() {
+        var set = ScanSet(name: "Big")
+        let a = Scan(), b = Scan(), c = Scan()
+        set.append(a); set.append(b); set.append(c)
+
+        let child = set.split(scanIDs: [b.id, c.id], name: "Split")
+        XCTAssertEqual(child.name, "Split")
+        XCTAssertEqual(Set(child.scans.map(\.id)), [b.id, c.id])
+        XCTAssertEqual(child.poseGraph.nodes.count, 2)
+        XCTAssertEqual(set.scanCount, 3, "original project is unchanged")
+    }
 }

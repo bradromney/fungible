@@ -44,6 +44,26 @@ final class ScanSetAssemblerTests: XCTestCase {
         XCTAssertEqual(merged.count, 2)
     }
 
+    func testHiddenScanIsExcludedButRecoverable() async throws {
+        let store = InMemoryScanStore()
+        var set = ScanSet(name: "Vis")
+        let aID = ScanID(), bID = ScanID()
+        let refA = try await store.writeBlob(points: points(at: 0), for: aID)
+        let refB = try await store.writeBlob(points: points(at: 1), for: bID)
+        set.append(Scan(id: aID, pointCloud: refA, pose: .identity, status: .registered))
+        set.append(Scan(id: bID, pointCloud: refB,
+                        pose: Transform(translation: Vector3(0, 0, 10)), status: .registered))
+
+        set.setScan(bID, hidden: true)
+        let visible = try await ScanSetAssembler(store: store).assemble(set)
+        XCTAssertEqual(visible.count, 2, "hidden scan drops out of the merge")
+        XCTAssertFalse(visible.contains { abs($0.position.z - 10) < 1e-9 })
+
+        // includeHidden brings it back — nothing was deleted, just hidden.
+        let all = try await ScanSetAssembler(store: store).assemble(set, includeHidden: true)
+        XCTAssertEqual(all.count, 4)
+    }
+
     func testAssembledCloudExportsToPLY() async throws {
         let store = InMemoryScanStore()
         let set = try await makeSet(store: store)

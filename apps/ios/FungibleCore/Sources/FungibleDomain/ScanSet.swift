@@ -103,6 +103,10 @@ public struct ScanSet: Identifiable, Equatable, Codable, Sendable {
     public var annotations: [Annotation]
     /// Device-authored web-share intent (ADR-0009).
     public var share: ShareSettings
+    /// Scans the user has hidden/excluded from the combined cloud (ADR-0010).
+    /// Non-destructive: the blob + pose stay, so show/hide is fully reversible —
+    /// the merge is composed from the *visible* scans at read/export time.
+    public var hiddenScans: Set<ScanID>
 
     public init(
         id: ScanSetID = ScanSetID(),
@@ -115,7 +119,8 @@ public struct ScanSet: Identifiable, Equatable, Codable, Sendable {
         scans: [Scan] = [],
         measurements: [Measurement] = [],
         annotations: [Annotation] = [],
-        share: ShareSettings = ShareSettings()
+        share: ShareSettings = ShareSettings(),
+        hiddenScans: Set<ScanID> = []
     ) {
         self.id = id
         self.name = name
@@ -128,10 +133,11 @@ public struct ScanSet: Identifiable, Equatable, Codable, Sendable {
         self.measurements = measurements
         self.annotations = annotations
         self.share = share
+        self.hiddenScans = hiddenScans
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, createdAt, type, regionOfInterest, crs, poseGraph, scans, measurements, annotations, share
+        case id, name, createdAt, type, regionOfInterest, crs, poseGraph, scans, measurements, annotations, share, hiddenScans
     }
 
     // Tolerant decode (ADR-0009): a set written before `type`/`share` existed
@@ -149,11 +155,42 @@ public struct ScanSet: Identifiable, Equatable, Codable, Sendable {
         measurements = try c.decode([Measurement].self, forKey: .measurements)
         annotations = try c.decode([Annotation].self, forKey: .annotations)
         share = try c.decodeIfPresent(ShareSettings.self, forKey: .share) ?? ShareSettings()
+        hiddenScans = try c.decodeIfPresent(Set<ScanID>.self, forKey: .hiddenScans) ?? []
     }
 
     public var scanCount: Int { scans.count }
 
     public func scan(_ id: ScanID) -> Scan? { scans.first { $0.id == id } }
+
+    // MARK: - Reversible multi-scan composition (ADR-0010)
+
+    /// The scans that make up the combined cloud right now — everything the user
+    /// hasn't hidden. Registration, rendering, and export all work off this so
+    /// hiding a scan never touches its stored points.
+    public var visibleScans: [Scan] { scans.filter { !hiddenScans.contains($0.id) } }
+
+    public func isVisible(_ id: ScanID) -> Bool { !hiddenScans.contains(id) }
+
+    /// Hide/show a scan (reversible exclude). Ignores unknown ids.
+    public mutating func setScan(_ id: ScanID, hidden: Bool) {
+        guard scans.contains(where: { $0.id == id }) else { return }
+        if hidden { hiddenScans.insert(id) } else { hiddenScans.remove(id) }
+    }
+
+    /// Split a subset of scans into a brand-new project, leaving this one intact.
+    /// Each scan keeps its optimized pose, so the extracted set renders/exports
+    /// correctly on its own; pose-graph edges wholly inside the subset carry over.
+    /// The original is unchanged — the caller decides whether to also hide/remove
+    /// the moved scans here.
+    public func split(scanIDs: Set<ScanID>, name: String) -> ScanSet {
+        let taken = scans.filter { scanIDs.contains($0.id) }
+        var graph = PoseGraph()
+        for scan in taken { graph.addNode(scan.id) }
+        for c in poseGraph.constraints where scanIDs.contains(c.from) && scanIDs.contains(c.to) {
+            graph.addConstraint(c)
+        }
+        return ScanSet(name: name, type: type, crs: crs, poseGraph: graph, scans: taken)
+    }
 
     /// Add a freshly-finalized scan and register it as a node. No limit check —
     /// that absence is the point (ADR-0005).
