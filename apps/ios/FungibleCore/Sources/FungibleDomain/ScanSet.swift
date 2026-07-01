@@ -22,9 +22,9 @@ public struct BoundingBox: Equatable, Codable, Sendable {
 
     public var center: Vector3 { (min + max) * 0.5 }
 
-    /// Axis-aligned box enclosing all points (nil if empty). Useful for
-    /// defaulting a region-of-interest from a first scan.
-    static func containing(_ points: [Vector3]) -> BoundingBox? {
+    /// Axis-aligned box enclosing all points (nil if empty). Used to default a
+    /// region-of-interest and to auto-detect the project type from a first scan.
+    public static func containing(_ points: [Vector3]) -> BoundingBox? {
         guard let first = points.first else { return nil }
         var lo = first, hi = first
         for p in points {

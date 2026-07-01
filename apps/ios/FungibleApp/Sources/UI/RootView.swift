@@ -27,7 +27,9 @@ struct RootView: View {
                 }
         }
         .task {
-            #if DEBUG
+            // Simulator only: real devices capture real projects — a device
+            // DEBUG build must not mix demo data into the live catalog.
+            #if DEBUG && targetEnvironment(simulator)
             await DemoSeed.seedIfEmpty(projects.store)
             #endif
             await projects.load()

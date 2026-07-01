@@ -61,14 +61,14 @@ struct CaptureView: View {
     }
 
     private var controls: some View {
-        // "Finish pass" — a capture is one pass appended to a project (ADR-0005),
-        // not a standalone "scan". On save, dismiss back to the project list.
+        // "Finish pass" — one pass appended to the growing project (ADR-0005).
+        // The AR session stays alive so the next pass shares this world frame.
         Button {
             Task {
                 isSaving = true
-                await viewModel.finishScan()
+                let saved = await viewModel.finishPass()
                 isSaving = false
-                onFinish()
+                if saved { onFinish() }   // empty pass: stay, status explains
             }
         } label: {
             Text(isSaving ? "Saving…" : "Finish pass")

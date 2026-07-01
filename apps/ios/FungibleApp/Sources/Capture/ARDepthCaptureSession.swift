@@ -29,7 +29,13 @@ final class ARDepthCaptureSession: NSObject, ARSessionDelegate {
 
     private var frameIndex = 0
 
-    func start() {
+    /// Start (or resume) tracking. `resetting: true` establishes a fresh world
+    /// frame — the first pass of a project. `resetting: false` resumes the SAME
+    /// session, so every later pass lands in one shared frame; that shared frame
+    /// is the pose prior registration then refines (the session-alive strategy
+    /// behind ADR-0005 — cross-session relocalization via ARWorldMap is the M3
+    /// follow-up).
+    func start(resetting: Bool = true) {
         let config = ARWorldTrackingConfiguration()
         if ARWorldTrackingConfiguration.supportsFrameSemantics(.smoothedSceneDepth) {
             config.frameSemantics.insert(.smoothedSceneDepth)
@@ -40,7 +46,7 @@ final class ARDepthCaptureSession: NSObject, ARSessionDelegate {
             config.sceneReconstruction = .mesh
         }
         session.delegate = self
-        session.run(config, options: [.resetTracking, .removeExistingAnchors])
+        session.run(config, options: resetting ? [.resetTracking, .removeExistingAnchors] : [])
     }
 
     func pause() { session.pause() }

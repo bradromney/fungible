@@ -29,13 +29,17 @@ struct CaptureFlowView: View {
                 onFinish: { savedPoints = viewModel.pointCount; step = .handoff }
             )
         case .handoff:
-            // First pass into a fresh project reads as a new area (single-scan
-            // today; real overlap detection is M3). Reversible later via split/merge.
+            // Every pass this flow saves grows ONE project (session-alive,
+            // ADR-0005); "Scan again" resumes the same AR session/world frame.
             PostCaptureHandoffView(
                 pointCount: savedPoints,
-                overlaps: false,
+                passCount: viewModel.project?.scanCount ?? 1,
+                projectName: viewModel.project?.name ?? "Untitled Site",
                 onScanAgain: { step = .capturing },
-                onDone: onClose
+                onConfirm: { name in
+                    viewModel.renameProject(name)
+                    onClose()
+                }
             )
         }
     }
