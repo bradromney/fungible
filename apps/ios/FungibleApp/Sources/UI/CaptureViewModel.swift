@@ -159,9 +159,11 @@ final class CaptureViewModel: ObservableObject {
                 fine: ICPFineAligner(maxCorrespondenceDistance: 0.5),
                 optimizer: ChainPoseGraphOptimizer()
             )
-            guard let result = try? await registrar.register(
+            // try? flattens register's optional result (SE-0230): nil covers
+            // both a thrown error and the no-previous case.
+            guard let r = try? await registrar.register(
                 newScan: scanID, samples: samples, against: previous, in: &s
-            ), let r = result, r.fitness >= minFitness else { return nil }
+            ), r.fitness >= minFitness else { return nil }
             if let i = s.scans.firstIndex(where: { $0.id == scanID }) {
                 s.scans[i].quality.driftEstimateMeters = r.inlierRMSE
             }
