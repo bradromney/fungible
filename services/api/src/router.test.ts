@@ -50,6 +50,42 @@ describe("share flow", () => {
     expect((await route({ method: "POST", path: "/sets/missing/share", body: undefined }, s)).status).toBe(404);
     expect((await route({ method: "GET", path: "/share/bad", body: undefined }, s)).status).toBe(404);
   });
+
+  it("expires a share after its window and rejects a bad expiry body", async () => {
+    const s = store();
+    const set = (await route({ method: "POST", path: "/sets", body: { name: "Timed" } }, s)).body as SetRecord;
+
+    const minted = new Date("2026-07-01T00:00:00.000Z");
+    const shareRes = await route(
+      { method: "POST", path: `/sets/${set.id}/share`, body: { expiresInDays: 7 } },
+      s,
+      minted
+    );
+    expect(shareRes.status).toBe(201);
+    const { token, expiresAt } = shareRes.body as { token: string; expiresAt: string };
+    expect(expiresAt).toBe("2026-07-08T00:00:00.000Z");
+
+    const day6 = new Date("2026-07-07T00:00:00.000Z");
+    const day8 = new Date("2026-07-09T00:00:00.000Z");
+    expect((await route({ method: "GET", path: `/share/${token}`, body: undefined }, s, day6)).status).toBe(200);
+    expect((await route({ method: "GET", path: `/share/${token}`, body: undefined }, s, day8)).status).toBe(404);
+
+    const bad = await route({ method: "POST", path: `/sets/${set.id}/share`, body: { expiresInDays: -1 } }, s);
+    expect(bad.status).toBe(400);
+  });
+
+  it("revokes a share so it stops resolving", async () => {
+    const s = store();
+    const set = (await route({ method: "POST", path: "/sets", body: { name: "Revocable" } }, s)).body as SetRecord;
+    const { token } = (await route({ method: "POST", path: `/sets/${set.id}/share`, body: undefined }, s)).body as {
+      token: string;
+    };
+
+    expect((await route({ method: "GET", path: `/share/${token}`, body: undefined }, s)).status).toBe(200);
+    expect((await route({ method: "DELETE", path: `/share/${token}`, body: undefined }, s)).status).toBe(204);
+    expect((await route({ method: "GET", path: `/share/${token}`, body: undefined }, s)).status).toBe(404);
+    expect((await route({ method: "DELETE", path: "/share/unknown", body: undefined }, s)).status).toBe(404);
+  });
 });
 
 describe("uploads", () => {

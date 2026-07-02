@@ -22,6 +22,17 @@ export interface CreateSetBody {
   bounds?: Bounds;
 }
 
+export interface ShareInfo {
+  token: string;
+  /** ISO-8601 instant after which the link stops resolving; absent = no expiry. */
+  expiresAt?: string;
+}
+
+export interface CreateShareBody {
+  /** Days until the link expires (measured from `now`); absent = no expiry. */
+  expiresInDays?: number;
+}
+
 export interface UploadTarget {
   /** Where the client PUTs the blob (presigned URL or a Worker route). */
   url: string;
@@ -45,4 +56,7 @@ export function badRequest(message: string): ApiResponse {
 }
 export function notFound(message = "not found"): ApiResponse {
   return { status: 404, body: { error: message } };
+}
+export function noContent(): ApiResponse {
+  return { status: 204, body: null };
 }
