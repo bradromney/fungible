@@ -168,4 +168,32 @@ final class ScanSetTests: XCTestCase {
         XCTAssertEqual(child.poseGraph.nodes.count, 2)
         XCTAssertEqual(set.scanCount, 3, "original project is unchanged")
     }
+
+    func testRemoveScanPrunesMembershipVisibilityAndGraph() {
+        var set = ScanSet()
+        let a = Scan(), b = Scan()
+        set.append(a); set.append(b)
+        set.poseGraph.addConstraint(PoseConstraint(from: a.id, to: b.id, relativePose: .identity))
+        set.setScan(b.id, hidden: true)
+
+        set.removeScan(b.id)
+        XCTAssertEqual(set.scans.map(\.id), [a.id])
+        XCTAssertTrue(set.hiddenScans.isEmpty)
+        XCTAssertEqual(set.poseGraph.nodes, [a.id])
+        XCTAssertTrue(set.poseGraph.constraints.isEmpty, "constraints touching the removed scan go too")
+    }
+
+    /// The split-then-remove flow the UI uses: the scan MOVES to the child.
+    func testSplitThenRemoveMovesScanBetweenProjects() {
+        var set = ScanSet(name: "Site")
+        let a = Scan(), b = Scan()
+        set.append(a); set.append(b)
+
+        let child = set.split(scanIDs: [b.id], name: "Annex")
+        set.removeScan(b.id)
+
+        XCTAssertEqual(set.scans.map(\.id), [a.id])
+        XCTAssertEqual(child.scans.map(\.id), [b.id])
+        XCTAssertEqual(child.type, set.type, "child inherits the market type")
+    }
 }

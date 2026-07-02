@@ -69,9 +69,10 @@ struct ProjectDetailView: View {
 
     private var viewer: some View {
         ZStack {
-            // Live, orbitable point cloud rendered with Metal (replaces the
-            // placeholder). Loads the project's blobs from the store.
-            ProjectCloudViewer(scans: set.scans, store: viewModel.store)
+            // Live, orbitable point cloud rendered with Metal. Composes the
+            // VISIBLE passes only — hiding a pass drops it from the cloud
+            // instantly, reversibly (ADR-0010).
+            ProjectCloudViewer(scans: set.visibleScans, store: viewModel.store)
             // Non-blocking background-registration banner (ADR-0005).
             if let registering = set.scans.firstIndex(where: { $0.status.isInProgress }) {
                 VStack {
@@ -145,12 +146,21 @@ struct ProjectDetailView: View {
     }
 
     private func passRow(index: Int, scan: Scan) -> some View {
-        HStack(spacing: 12) {
+        let hidden = !set.isVisible(scan.id)
+        return HStack(spacing: 12) {
             Image(systemName: scan.status.symbolName)
                 .foregroundStyle(scan.status.needsAttention ? Color.orange : Color.secondary)
                 .frame(width: 24)
             VStack(alignment: .leading, spacing: 3) {
-                Text("Pass \(index + 1)").font(.subheadline.weight(.semibold))
+                HStack(spacing: 6) {
+                    Text("Pass \(index + 1)").font(.subheadline.weight(.semibold))
+                    if hidden {
+                        Text("Hidden").font(.caption2.weight(.bold))
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(Color.secondary.opacity(0.15), in: Capsule())
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 Text(DisplayFormat.preciseTimestamp(scan.capturedAt))
                     .font(.caption.monospacedDigit()).foregroundStyle(.tertiary)
                 HStack(spacing: 6) {
@@ -166,8 +176,35 @@ struct ProjectDetailView: View {
             Spacer()
             Text(DisplayFormat.pointCount(scan.pointCloud.pointCount))
                 .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+            // One-tap reversible show/hide (ADR-0010) — mirrors CloudCompare's
+            // per-cloud eye. The blob and pose stay; only composition changes.
+            Button {
+                viewModel.setScanHidden(scan.id, hidden: !hidden, for: set.id)
+            } label: {
+                Image(systemName: hidden ? "eye.slash" : "eye")
+                    .foregroundStyle(hidden ? Color.secondary : Color.accentColor)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(hidden ? "Show pass \(index + 1)" : "Hide pass \(index + 1)")
         }
         .padding(.horizontal).padding(.vertical, 10)
+        .opacity(hidden ? 0.55 : 1)
+        .contextMenu {
+            Button {
+                viewModel.setScanHidden(scan.id, hidden: !hidden, for: set.id)
+            } label: {
+                Label(hidden ? "Show in cloud" : "Hide from cloud",
+                      systemImage: hidden ? "eye" : "eye.slash")
+            }
+            if set.scans.count > 1 {
+                Button {
+                    viewModel.splitScan(scan.id, from: set.id,
+                                        name: "\(set.name) — pass \(index + 1)")
+                } label: {
+                    Label("Split into new project", systemImage: "arrow.triangle.branch")
+                }
+            }
+        }
     }
 
     // MARK: - Details

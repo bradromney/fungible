@@ -60,6 +60,29 @@ final class ProjectsViewModel: ObservableObject {
     func setType(_ type: ProjectType, for id: ScanSetID) { update(id) { $0.type = type } }
     func updateShare(_ share: ShareSettings, for id: ScanSetID) { update(id) { $0.share = share } }
 
+    // MARK: - Reversible multi-scan curation (ADR-0010)
+
+    /// Hide/show a pass in the combined cloud — O(1) metadata, never data loss.
+    func setScanHidden(_ scanID: ScanID, hidden: Bool, for id: ScanSetID) {
+        update(id) { $0.setScan(scanID, hidden: hidden) }
+    }
+
+    /// Move one pass into a brand-new project (split). The blob is content-
+    /// addressed and referenced by the child, so nothing is lost; the child
+    /// carries the scan's optimized pose and stands alone.
+    func splitScan(_ scanID: ScanID, from id: ScanSetID, name: String) {
+        guard let i = sets.firstIndex(where: { $0.id == id }) else { return }
+        let child = sets[i].split(scanIDs: [scanID], name: name)
+        guard !child.scans.isEmpty else { return }
+        sets[i].removeScan(scanID)
+        sets.append(child)
+        let parent = sets[i]
+        Task {
+            try? await store.save(parent)
+            try? await store.save(child)
+        }
+    }
+
     // MARK: - Filtering & sorting (pure)
 
     private var visibleSets: [ScanSet] {

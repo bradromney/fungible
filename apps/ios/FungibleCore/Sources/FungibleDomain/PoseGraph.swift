@@ -53,6 +53,13 @@ public struct PoseGraph: Equatable, Codable, Sendable {
         constraints.append(c)
     }
 
+    /// Remove a scan's node and every constraint touching it (ADR-0010 split/
+    /// remove). Remaining nodes keep their poses until the optimizer re-runs.
+    public mutating func removeNode(_ id: ScanID) {
+        nodes.removeAll { $0 == id }
+        constraints.removeAll { $0.from == id || $0.to == id }
+    }
+
     /// Constraints touching a given scan — used to find a scan's local
     /// neighborhood for incremental (scan-to-submap) registration.
     public func constraints(touching id: ScanID) -> [PoseConstraint] {

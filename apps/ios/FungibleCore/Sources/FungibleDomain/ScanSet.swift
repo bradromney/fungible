@@ -177,6 +177,16 @@ public struct ScanSet: Identifiable, Equatable, Codable, Sendable {
         if hidden { hiddenScans.insert(id) } else { hiddenScans.remove(id) }
     }
 
+    /// Remove a scan from this project entirely: membership, visibility state,
+    /// and its pose-graph node/constraints. The blob itself is content-addressed
+    /// and survives as long as any set references it (GC keeps it if the scan
+    /// was split into another project first).
+    public mutating func removeScan(_ id: ScanID) {
+        scans.removeAll { $0.id == id }
+        hiddenScans.remove(id)
+        poseGraph.removeNode(id)
+    }
+
     /// Split a subset of scans into a brand-new project, leaving this one intact.
     /// Each scan keeps its optimized pose, so the extracted set renders/exports
     /// correctly on its own; pose-graph edges wholly inside the subset carry over.
