@@ -21,7 +21,10 @@ CI runs `typecheck` + `test` on every push.
 
 ## Loading a scan
 
-Pass a LAS/LAZ URL: `index.html?url=https://…/scan.laz`. With no `url` it shows a
+Pass a LAS/LAZ URL: `index.html?url=https://…/scan.laz`, or a Fungible share
+link: `index.html?share=<token>&api=https://<worker-host>` — the viewer resolves
+`GET <api>/share/<token>` and streams the set's blob with the same token (no
+credentials needed; expired/revoked links show a friendly error). With no `url` it shows a
 placeholder cloud. COPC range-streaming (via `copc.ts` + potree-core) layers on
 top of the same `toPointData` normalizer next.
 
@@ -31,4 +34,5 @@ top of the same `toPointData` normalizer next.
   (display helpers, byte-range/manifest, attribute→buffer conversion).
 - `src/lasSource.ts` — loaders.gl LAS/LAZ fetch+parse (network edge).
 - `src/pointCloudViewer.ts` — three.js renderer (the seam for the streaming loader).
-- `src/main.ts` / `index.html` — bootstrap; loads `?url=` or a placeholder.
+- `src/main.ts` / `index.html` — bootstrap; loads `?url=`, `?share=`, or a placeholder.
+- `src/share.ts` — pure share-link resolution (params → endpoints, record validation).

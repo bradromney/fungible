@@ -1,26 +1,56 @@
 import { PointCloudViewer } from "./pointCloudViewer";
 import { formatPointCount } from "./format";
 import { loadLAS } from "./lasSource";
+import { blobEndpoint, parseSharedSet, parseViewerRequest, shareEndpoint } from "./share";
 
 const canvas = document.getElementById("viewer") as HTMLCanvasElement | null;
 const label = document.getElementById("count");
+
+function setLabel(text: string) {
+  if (label) label.textContent = text;
+}
 
 if (canvas) {
   const viewer = new PointCloudViewer(canvas);
   viewer.start();
 
-  // `?url=<las/laz>` loads a real scan; otherwise show a placeholder cloud.
-  const url = new URLSearchParams(location.search).get("url");
-  if (url) {
-    if (label) label.textContent = "loading…";
+  // `?url=<las/laz>` loads a raw file; `?share=<token>[&api=<base>]` resolves a
+  // Fungible share link through the API; otherwise show a placeholder cloud.
+  const request = parseViewerRequest(location.search);
+
+  const showCloud = (url: string, name?: string) => {
+    setLabel("loading…");
     loadLAS(url)
       .then((pd) => {
         viewer.setPoints(pd.positions, pd.colors);
-        if (label) label.textContent = `${formatPointCount(pd.count)} points`;
+        const points = `${formatPointCount(pd.count)} points`;
+        setLabel(name ? `${name} — ${points}` : points);
       })
       .catch((err) => {
         console.error(err);
-        if (label) label.textContent = "load error";
+        setLabel("load error");
+      });
+  };
+
+  if (request.url) {
+    showCloud(request.url);
+  } else if (request.share) {
+    const { token, api } = request.share;
+    setLabel("resolving share…");
+    fetch(shareEndpoint(api, token))
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`share ${res.status}`);
+        const set = parseSharedSet(await res.json());
+        if (!set) throw new Error("malformed share record");
+        if (set.blobKey) {
+          showCloud(blobEndpoint(api, set.blobKey, token), set.name);
+        } else {
+          setLabel(`${set.name} — no scan uploaded yet`);
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        setLabel("share link not found or expired");
       });
   } else {
     const count = 20_000;
@@ -31,6 +61,6 @@ if (canvas) {
       positions[i * 3 + 2] = (Math.random() - 0.5) * 4;
     }
     viewer.setPoints(positions);
-    if (label) label.textContent = `${formatPointCount(count)} points (demo)`;
+    setLabel(`${formatPointCount(count)} points (demo)`);
   }
 }
