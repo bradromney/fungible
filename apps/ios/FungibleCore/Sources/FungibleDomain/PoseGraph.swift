@@ -11,6 +11,7 @@ import Foundation
 public struct PoseConstraint: Equatable, Codable, Sendable {
     public enum Kind: String, Codable, Sendable {
         case sequential   // adjacent capture-order alignment
+        case submap       // redundant local-neighborhood alignment (ADR-0005)
         case loopClosure  // revisit detected; corrects accumulated drift
         case manual       // user-asserted alignment / correction
     }
