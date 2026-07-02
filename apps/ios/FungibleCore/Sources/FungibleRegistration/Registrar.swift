@@ -41,15 +41,17 @@ public protocol FineAligner: Sendable {
 
 /// Incremental pose-graph optimization. Consumes the domain PoseGraph and
 /// returns optimized per-scan poses, decoupling per-scan cost from total set
-/// size. Today: ChainPoseGraphOptimizer (odometry-only composition — ignores
-/// redundant/loop-closure edges); real optimization (GTSAM iSAM2 or a Swift
-/// Gauss-Newton) is the drop-in this protocol exists for.
+/// size. GaussNewtonPoseGraphOptimizer is the real least-squares back-end
+/// (honors redundant/submap/loop-closure edges and information weights);
+/// ChainPoseGraphOptimizer remains the fast odometry-only baseline. A bridged
+/// GTSAM iSAM2 stays the drop-in for sparse solving on very large graphs.
 public protocol PoseGraphOptimizer: Sendable {
     func optimize(_ graph: PoseGraph) async throws -> [ScanID: Transform]
 }
 
-/// Detects revisits to add loop-closure constraints (RTAB-Map-style).
-/// No implementation exists yet; drift correction is open until one does.
+/// Detects revisits to add loop-closure constraints. ProximityLoopCloser is
+/// the pose-proximity baseline; an appearance-based (RTAB-Map-style) detector
+/// is the upgrade for revisits the pose estimate itself has drifted past.
 public protocol LoopCloser: Sendable {
     func detectClosures(in set: ScanSet, newScan: ScanID) async throws -> [PoseConstraint]
 }

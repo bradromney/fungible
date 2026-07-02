@@ -14,17 +14,20 @@ public struct IncrementalRegistrar: Sendable {
     public let fine: any FineAligner
     public let optimizer: any PoseGraphOptimizer
     public let submap: SubmapSelector
+    public let loopCloser: (any LoopCloser)?
 
     public init(
         coarse: any CoarseAligner,
         fine: any FineAligner,
         optimizer: any PoseGraphOptimizer,
-        submap: SubmapSelector = SubmapSelector()
+        submap: SubmapSelector = SubmapSelector(),
+        loopCloser: (any LoopCloser)? = nil
     ) {
         self.coarse = coarse
         self.fine = fine
         self.optimizer = optimizer
         self.submap = submap
+        self.loopCloser = loopCloser
     }
 
     /// Register `newScan` (already appended to `set`) against the previous scan,
@@ -80,11 +83,18 @@ public struct IncrementalRegistrar: Sendable {
             kind: .sequential
         ))
 
+        // Give the new scan its pre-optimization pose estimate so submap
+        // guesses and loop-closure proximity checks see where it actually is
+        // (the optimizer refines it below).
+        let previousPose = set.scan(previous.id)?.pose ?? .identity
+        let newPoseEstimate = previousPose.composed(with: fineResult.transform)
+        if let index = set.scans.firstIndex(where: { $0.id == newScan }) {
+            set.scans[index].pose = newPoseEstimate
+        }
+
         // Scan-to-submap: constrain against the local neighborhood too. The
         // sequential edge above is required; a neighbor that can't align (thin
         // overlap) is skipped without failing the registration.
-        let previousPose = set.scan(previous.id)?.pose ?? .identity
-        let newPoseEstimate = previousPose.composed(with: fineResult.transform)
         let neighbors = submap.neighborhood(of: newScan, in: set.poseGraph)
             .filter { $0 != previous.id && $0 != newScan }
         for neighbor in neighbors {
@@ -103,6 +113,14 @@ public struct IncrementalRegistrar: Sendable {
                 information: max(result.fitness, 1e-3),
                 kind: .submap
             ))
+        }
+
+        // Loop closure: if the user has walked back to somewhere they've been,
+        // add the drift-correcting constraint before this optimization pass.
+        if let loopCloser {
+            for closure in try await loopCloser.detectClosures(in: set, newScan: newScan) {
+                set.poseGraph.addConstraint(closure)
+            }
         }
 
         let poses = try await optimizer.optimize(set.poseGraph)

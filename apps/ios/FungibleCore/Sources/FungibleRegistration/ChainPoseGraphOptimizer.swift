@@ -4,9 +4,9 @@ import FungibleDomain
 // A dependency-free baseline pose-graph "optimizer": it composes relative-pose
 // constraints outward from a root via breadth-first traversal, assigning each
 // scan a global pose. It does NOT do least-squares loop-closure correction —
-// that's the job of the bridged GTSAM iSAM2 `PoseGraphOptimizer` (ADR-0005).
-// This baseline keeps the whole incremental pipeline runnable and testable
-// before the C++ bridge lands, and is a correct fallback for drift-free chains.
+// use GaussNewtonPoseGraphOptimizer for that (it seeds itself from this
+// baseline). This remains the fast exact answer for drift-free chains and the
+// seed for the real optimizer.
 public struct ChainPoseGraphOptimizer: PoseGraphOptimizer {
     public init() {}
 
