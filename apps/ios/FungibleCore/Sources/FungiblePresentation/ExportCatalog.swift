@@ -37,14 +37,20 @@ public struct ExportFormat: Equatable, Sendable, Identifiable {
     public let tag: String         // short intent chip on the card (Cloud/CAD/…)
     public let intent: Intent
     public let capability: Capability
+    /// True when a real on-device writer exists (PLY/XYZ/LAS today). The rest are
+    /// built server-side by the PDAL worker, so the UI can export the on-device
+    /// ones immediately and route the others through sync/processing.
+    public let onDevice: Bool
 
-    public init(ext: String, blurb: String, tag: String, intent: Intent, capability: Capability) {
+    public init(ext: String, blurb: String, tag: String, intent: Intent,
+                capability: Capability, onDevice: Bool = false) {
         self.id = ext.lowercased()
         self.ext = ext
         self.blurb = blurb
         self.tag = tag
         self.intent = intent
         self.capability = capability
+        self.onDevice = onDevice
     }
 }
 
@@ -52,11 +58,14 @@ public enum ExportCatalog {
     /// Every supported target, in display order within its intent group. Copy
     /// mirrors the wireframe so the screen reads the same plain-language text.
     public static let all: [ExportFormat] = [
-        // Point cloud
-        ExportFormat(ext: "LAZ",     blurb: "Compressed LAS — the survey standard",     tag: "Cloud", intent: .pointCloud, capability: .exportLAZ),
-        ExportFormat(ext: "COPC",    blurb: "Cloud-optimized point cloud — streamable", tag: "Cloud", intent: .pointCloud, capability: .exportLAZ),
+        // Point cloud — LAS/PLY/XYZ write on device now; LAZ/COPC/E57 are the
+        // compressed/native codecs the PDAL worker builds server-side.
+        ExportFormat(ext: "LAS",     blurb: "ASPRS survey standard — with per-scan IDs", tag: "Cloud", intent: .pointCloud, capability: .exportLAZ, onDevice: true),
+        ExportFormat(ext: "PLY",     blurb: "Polygon / point — universal",               tag: "Cloud", intent: .pointCloud, capability: .exportLAZ, onDevice: true),
+        ExportFormat(ext: "XYZ",     blurb: "Plain ASCII points — reads anywhere",       tag: "Cloud", intent: .pointCloud, capability: .exportLAZ, onDevice: true),
+        ExportFormat(ext: "LAZ",     blurb: "Compressed LAS — built in the cloud",       tag: "Cloud", intent: .pointCloud, capability: .exportLAZ),
+        ExportFormat(ext: "COPC",    blurb: "Cloud-optimized point cloud — streamable",  tag: "Cloud", intent: .pointCloud, capability: .exportLAZ),
         ExportFormat(ext: "E57",     blurb: "ASTM interchange — scans + imagery",        tag: "Cloud", intent: .pointCloud, capability: .exportE57),
-        ExportFormat(ext: "PLY",     blurb: "Polygon / point — universal mesh",          tag: "Cloud", intent: .pointCloud, capability: .exportLAZ),
         // CAD & BIM
         ExportFormat(ext: "DXF",     blurb: "AutoCAD drawing exchange",                  tag: "CAD",   intent: .cadBim,     capability: .exportDXF),
         ExportFormat(ext: "IFC",     blurb: "openBIM building model",                    tag: "BIM",   intent: .cadBim,     capability: .exportIFC),

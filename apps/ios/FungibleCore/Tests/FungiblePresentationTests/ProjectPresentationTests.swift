@@ -157,11 +157,16 @@ final class ExportCatalogTests: XCTestCase {
 
     func testAllFormatsGroupedByIntent() {
         XCTAssertEqual(ExportCatalog.formats(in: .pointCloud).map(\.ext),
-                       ["LAZ", "COPC", "E57", "PLY"])
+                       ["LAS", "PLY", "XYZ", "LAZ", "COPC", "E57"])
         XCTAssertEqual(ExportCatalog.formats(in: .cadBim).map(\.ext),
                        ["DXF", "IFC", "LandXML"])
         XCTAssertEqual(ExportCatalog.formats(in: .model3D).map(\.ext),
                        ["USDZ", "OBJ", "glTF"])
+    }
+
+    func testOnDeviceFormatsAreExactlyTheShippedWriters() {
+        let onDevice = Set(ExportCatalog.all.filter(\.onDevice).map(\.ext))
+        XCTAssertEqual(onDevice, ["LAS", "PLY", "XYZ"], "only the real on-device writers")
     }
 
     func testEveryFormatHasACardTag() {

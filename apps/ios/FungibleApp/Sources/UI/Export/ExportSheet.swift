@@ -1,18 +1,17 @@
 import SwiftUI
 import FungibleDomain
+import FungibleStorage
 import FungibleEntitlements
 import FungiblePresentation
 
 /// Screen 05 — Convert / Export. The interop hero: pick a target format from the
-/// real `ExportCatalog`, set options, choose a destination, export in the
-/// background. Three steps in one modal (pick → options → exporting). Formats are
-/// never locked in the free MVP — paywall candidates get a quiet ✦ badge.
-///
-/// The exporting step shows the wireframe's background-progress state. Wiring it
-/// to the real FungibleExport writers + the iOS share sheet (UIActivityViewController)
-/// is the next integration; the progress here is the UI state, not a real write.
+/// real `ExportCatalog`, set options, export and share. On-device formats
+/// (LAS/PLY/XYZ) write a real file and hand it to the iOS share sheet; the
+/// compressed/native codecs (LAZ/COPC/E57) are built server-side and route
+/// through processing/sync. Formats are never locked in the free MVP.
 struct ExportSheet: View {
     let set: ScanSet
+    let store: any ScanStore
     @Environment(\.dismiss) private var dismiss
     private let entitlements = EntitlementsService(entitlements: .mvpFreeEverything)
 
@@ -53,7 +52,9 @@ struct ExportSheet: View {
     @State private var includeAnnotations = true
     @State private var units: UnitSystem = .imperial
     @State private var destination: Destination = .shareSheet
-    @State private var progress: Double = 0
+    @State private var isExporting = false
+    @State private var exportedURL: URL?
+    @State private var exportError: String?
 
     // MARK: Derived
 
@@ -62,12 +63,7 @@ struct ExportSheet: View {
     }
     // `self.` is required: a computed-property body starting with the bare token
     // `set` is parsed as a setter accessor, not the `set` property.
-    private var totalPoints: Int { self.set.scans.reduce(0) { $0 + $1.pointCloud.pointCount } }
-    private var estimatedBytes: Int { totalPoints * 8 }   // rough per-point estimate
-    private var fileName: String {
-        let base = set.name.isEmpty ? "Untitled" : set.name
-        return base + "." + selected.ext.lowercased()
-    }
+    private var totalPoints: Int { self.set.visibleScans.reduce(0) { $0 + $1.pointCloud.pointCount } }
     private var fallback: String? {
         ExportCatalog.unsupportedFallback(for: selected, pointCount: totalPoints)
     }
@@ -100,7 +96,7 @@ struct ExportSheet: View {
             Text(titleText).font(.headline)
             Spacer()
             if step == .exporting {
-                Button("Done") { dismiss() }.disabled(progress < 1)
+                Button("Done") { dismiss() }.disabled(isExporting)
             } else {
                 Spacer().frame(width: 44)
             }
@@ -112,7 +108,7 @@ struct ExportSheet: View {
         switch step {
         case .pickFormat: return "Export"
         case .options:    return "Export options"
-        case .exporting:  return progress < 1 ? "Exporting" : "Ready to share"
+        case .exporting:  return isExporting ? "Exporting" : (exportedURL != nil ? "Ready to share" : "Export")
         }
     }
 
@@ -283,66 +279,105 @@ struct ExportSheet: View {
 
     // MARK: - Step C: exporting
 
-    private var exportingStep: some View {
+    @ViewBuilder private var exportingStep: some View {
         VStack(spacing: 20) {
             Spacer()
-            ZStack {
-                Circle().stroke(Color(white: 0.9), lineWidth: 10)
-                Circle()
-                    .trim(from: 0, to: progress)
-                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 10, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .animation(.easeInOut, value: progress)
-                Text("\(Int(progress * 100))%").font(.title2.monospacedDigit().weight(.semibold))
+            if !selected.onDevice {
+                cloudFormatState
+            } else if isExporting {
+                exportingState
+            } else if let url = exportedURL {
+                readyState(url)
+            } else if let error = exportError {
+                errorState(error)
             }
-            .frame(width: 132, height: 132)
-
-            Text(progress < 1 ? "Writing \(selected.ext)…" : "Ready to share")
-                .font(.headline)
-            Text(progress < 1
-                 ? "Converting \(DisplayFormat.pointCount(totalPoints)) points. You can leave this screen — we'll save the file when it's done."
-                 : "Saved \(fileName).")
-                .font(.subheadline).foregroundStyle(.secondary)
-                .multilineTextAlignment(.center).padding(.horizontal, 32)
-
-            VStack(spacing: 6) {
-                Text(fileName).font(.subheadline.weight(.medium))
-                Text("~ \(DisplayFormat.fileSize(estimatedBytes))").font(.caption).foregroundStyle(.secondary)
-                if includeAnnotations && !set.annotations.isEmpty {
-                    Text("Annotations · \(set.annotations.count)").font(.caption).foregroundStyle(.secondary)
-                }
-            }
-            .padding(.top, 4)
-
             Spacer()
-            if progress >= 1 {
-                // Real share happens here (UIActivityViewController) once the
-                // FungibleExport write path is wired — that's the next step.
-                primaryButton("Share") { dismiss() }
-            }
         }
         .padding()
-        .task { await runProgress() }
+        .task { await runExport() }
+    }
+
+    private var exportingState: some View {
+        VStack(spacing: 16) {
+            ProgressView().controlSize(.large)
+            Text("Writing \(selected.ext)…").font(.headline)
+            Text("Merging \(DisplayFormat.pointCount(totalPoints)) points from \(DisplayFormat.passCount(set.visibleScans.count)).")
+                .font(.subheadline).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center).padding(.horizontal, 32)
+        }
+    }
+
+    private func readyState(_ url: URL) -> some View {
+        VStack(spacing: 14) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 54)).foregroundStyle(Color.accentColor)
+            Text("\(selected.ext) ready").font(.headline)
+            VStack(spacing: 4) {
+                Text(url.lastPathComponent).font(.subheadline.weight(.medium))
+                Text(fileSizeText(url)).font(.caption).foregroundStyle(.secondary)
+                if selected.ext == "LAS" {
+                    Text("Each point tagged with its pass — splits back in CloudCompare")
+                        .font(.caption2).foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            // Native share — AirDrop, Files, Mail, other apps — of the real file.
+            ShareLink(item: url) {
+                Text("Share").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 16)
+                    .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 14))
+                    .foregroundStyle(.white)
+            }
+            .padding(.horizontal).padding(.top, 4)
+        }
+    }
+
+    private func errorState(_ message: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 44)).foregroundStyle(.orange)
+            Text("Couldn't export").font(.headline)
+            Text(message).font(.subheadline).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center).padding(.horizontal, 32)
+            Button("Back") { step = .options }.font(.headline).padding(.top, 4)
+        }
+    }
+
+    private var cloudFormatState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "cloud").font(.system(size: 48)).foregroundStyle(.secondary)
+            Text("\(selected.ext) is built in the cloud").font(.headline)
+            Text("Compressed and cloud-optimized formats are converted server-side by the processing worker. That runs once cloud sync is set up — LAS, PLY, and XYZ export right here on device today.")
+                .font(.subheadline).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center).padding(.horizontal, 28)
+            Button("Choose an on-device format") { step = .pickFormat }
+                .font(.headline).padding(.top, 4)
+        }
     }
 
     // MARK: - Actions
 
     private func startExport() {
-        progress = 0
+        exportedURL = nil
+        exportError = nil
         step = .exporting
     }
 
-    /// Drives the wireframe's background-progress state. Placeholder for the real
-    /// FungibleExport conversion; deliberately not claiming a real file write.
-    private func runProgress() async {
-        while true {
-            try? await Task.sleep(nanoseconds: 120_000_000)
-            let done = await MainActor.run { () -> Bool in
-                progress = min(1, progress + 0.08)
-                return progress >= 1
-            }
-            if done { break }
+    /// Real export: assemble the visible cloud and write the file, then the
+    /// share sheet takes over. Cloud-only formats short-circuit to their note.
+    private func runExport() async {
+        guard selected.onDevice, exportedURL == nil, exportError == nil, !isExporting else { return }
+        isExporting = true
+        defer { isExporting = false }
+        do {
+            exportedURL = try await ExportRunner.export(set, ext: selected.ext, store: store)
+        } catch {
+            exportError = error.localizedDescription
         }
+    }
+
+    private func fileSizeText(_ url: URL) -> String {
+        let bytes = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        return DisplayFormat.fileSize(bytes)
     }
 
     // MARK: - Reusable bits

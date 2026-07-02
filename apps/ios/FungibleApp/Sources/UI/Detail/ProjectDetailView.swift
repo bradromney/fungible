@@ -48,7 +48,7 @@ struct ProjectDetailView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) { typeMenu }
         }
-        .sheet(isPresented: $showExport) { ExportSheet(set: set) }
+        .sheet(isPresented: $showExport) { ExportSheet(set: set, store: viewModel.store) }
         .sheet(isPresented: $showReport) { NavigationStack { SiteReportView(set: set) } }
         .sheet(isPresented: $showCutFill) {
             CutFillView(project: set) { viewModel.addMeasurement($0, to: set.id) }
