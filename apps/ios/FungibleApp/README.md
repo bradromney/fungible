@@ -15,7 +15,8 @@ Sources/FungibleApp/
   Capture/
     ARDepthCaptureSession.swift   ARKit session: sceneDepth + confidence + mesh
     PointCloudUnprojector.metal   GPU unprojection (mirrors FungibleCapture math)
-    DepthUnprojector.swift        Metal pipeline wrapper → CapturedPoint buffer
+    DepthUnprojector.swift        CPU unprojection → CapturedPoint buffer (the
+                                  Metal compute kernel exists but is not yet dispatched)
     CaptureSignalsBuilder.swift   ARFrame → FungibleGuidance.CaptureSignals
   UI/
     CaptureView.swift             SwiftUI capture screen

@@ -25,24 +25,31 @@ public struct RegistrationResult: Equatable, Sendable {
     }
 }
 
-/// Coarse global alignment with no initial guess (TEASER++ + FPFH).
+/// Coarse global alignment with no initial guess. Today: PassthroughCoarseAligner
+/// (trusts the caller's prior); a TEASER++ + FPFH bridge is the future drop-in
+/// for scans with no usable pose prior.
 public protocol CoarseAligner: Sendable {
     func align(source: PointSample, target: PointSample) async throws -> RegistrationResult
 }
 
-/// Fine local refinement given an initial guess (small_gicp, point-to-plane).
+/// Fine local refinement given an initial guess. Today: ICPFineAligner
+/// (pure-Swift point-to-point ICP, ADR-0008); small_gicp point-to-plane is the
+/// profiled drop-in if device profiling demands it.
 public protocol FineAligner: Sendable {
     func refine(source: PointSample, target: PointSample, initial: Transform) async throws -> RegistrationResult
 }
 
-/// Incremental pose-graph optimization (GTSAM iSAM2). Consumes the domain
-/// PoseGraph and returns optimized per-scan poses, decoupling per-scan cost
-/// from total set size.
+/// Incremental pose-graph optimization. Consumes the domain PoseGraph and
+/// returns optimized per-scan poses, decoupling per-scan cost from total set
+/// size. Today: ChainPoseGraphOptimizer (odometry-only composition — ignores
+/// redundant/loop-closure edges); real optimization (GTSAM iSAM2 or a Swift
+/// Gauss-Newton) is the drop-in this protocol exists for.
 public protocol PoseGraphOptimizer: Sendable {
     func optimize(_ graph: PoseGraph) async throws -> [ScanID: Transform]
 }
 
 /// Detects revisits to add loop-closure constraints (RTAB-Map-style).
+/// No implementation exists yet; drift correction is open until one does.
 public protocol LoopCloser: Sendable {
     func detectClosures(in set: ScanSet, newScan: ScanID) async throws -> [PoseConstraint]
 }

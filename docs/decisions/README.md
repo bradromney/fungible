@@ -18,3 +18,5 @@ Format: lightweight [MADR](https://adr.github.io/madr/)-style.
 | 0006 | Position on whitespace, not the incumbent's exit | Accepted |
 | 0007 | A general capture + interop platform; verticals on top | Accepted |
 | 0008 | Pure-Swift registration for v1; GICP a profiled drop-in | Accepted |
+| 0009 | Persisting UI-authored project state through the store  | Accepted |
+| 0010 | Reversible multi-scan composition (hide/exclude/split)  | Accepted |

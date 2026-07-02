@@ -70,17 +70,21 @@ domain logic is testable on Linux CI without a device.
 | --- | --- | --- | --- |
 | `FungibleDomain` | Pure value types + IDs; no framework deps | `Scan`, `ScanSet`, `PointCloudRef`, `Pose`, `PoseGraph`, `RegionOfInterest`, `Measurement`, `Annotation` | none |
 | `FungibleCapture` | Depth→world unprojection + bounded voxel accumulation (pure math; the ARKit `ARFrame` adapter and Metal mirror live in the app) | `CameraIntrinsics`, `Unprojection`, `ConfidenceFilter`, `VoxelAccumulator`, `CapturedPoint` | none |
-| `FungibleRegistration` | Grow a set incrementally; maintain the pose graph | `Registrar` (protocol), `CoarseAligner`, `FineAligner`, `PoseGraphOptimizer`, `LoopCloser` | C++ via bridge |
-| `FungibleStorage` | Local-first persistence + format I/O | `ScanStore` (protocol), `PointCloudCodec`, `COPCWriter`, `CatalogStore` | C/C++/Rust via bridge |
+| `FungibleRegistration` | Grow a set incrementally; maintain the pose graph | `Registrar` (protocol), `CoarseAligner`, `FineAligner`, `PoseGraphOptimizer`, `LoopCloser` | C++ via bridge (future; pure Swift today, ADR-0008) |
+| `FungibleStorage` | Local-first persistence + codec | `ScanStore` (protocol), `PointCloudCodec` (FPC1), `ContentHashing`; COPC/CRDT catalog are future bridged work | C/C++/Rust via bridge (future) |
 | `FungibleSync` | The pluggable sync layer | `SyncProvider` (protocol), `LocalOnlyProvider`, transfer/resume engine | per-driver |
-| `FungibleGuidance` | Real-time scan-quality coaching | `GuidanceEngine`, `CoverageGrid`, `GuidanceSignal`, `Prompt` | Metal |
-| `FungibleMeasure` | Distance/area/volume + cut/fill | `Measurer`, `SurfaceModel` (DEM/TIN), `CutFillEngine` | — |
-| `FungibleExport` | Pro-format export | `Exporter` (protocol) per format (LAZ/E57/PLY/DXF/USDZ/LandXML) | format libs |
+| `FungibleGuidance` | Real-time scan-quality coaching | `GuidanceEngine`, `CoverageGrid`, `GuidanceSignal`, `Prompt` | none (overlay rendering lives in the app) |
+| `FungibleMeasure` | Distance/area/volume + cut/fill | `HeightGrid` (DEM), `CutFillEngine`, `Contours`, `BestFitPlane` | — |
+| `FungibleExport` | Pro-format export | `PointCloudExporter`/`MeshExporter` per format (PLY/XYZ/LAS/DXF/OBJ/glTF today; LAZ/E57/COPC/USDZ/LandXML via bridged codecs) | format libs (future) |
 | `FungibleEntitlements` | Capability gating (monetization seams) | `EntitlementsService`, `Capability` | — |
-| `FungibleRendering` | Metal point-cloud renderer | `PointCloudRenderer`, `Octree`, `LODSelector` | Metal |
+| `FungibleInsights` | Deterministic site reports + optional LLM narrative seam | `ReportComposer`, `ReportService`, `LLMReportGenerator` (protocol) | — |
+| `FungiblePresentation` | Display formatting / view-model vocabulary shared by app + tests (ADR-0009) | `DisplayFormat`, `ProjectPresentation`, `ExportCatalog` | — |
 
-The app target (`FungibleApp`, added in Xcode on macOS) wires these into SwiftUI
-capture/review/measure/share flows and owns nothing but presentation + glue.
+The app target (`FungibleApp`, generated via XcodeGen) wires these into SwiftUI
+capture/review/measure/share flows and owns presentation + device glue,
+including the Metal point-cloud renderer and the ARKit capture session
+(`apps/ios/FungibleApp/Sources/Rendering`, `…/Capture`). Octree LOD selection
+is future renderer work.
 
 ## Core data model (domain)
 
