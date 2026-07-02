@@ -32,6 +32,7 @@ final class CaptureViewModel: ObservableObject {
     let session = ARDepthCaptureSession()
 
     private let store: any ScanStore
+    private let location = LocationProvider()
     private let guidance = RuleBasedGuidanceEngine()
     private let filter = ConfidenceFilter(minConfidence: .medium, maxRangeMeters: 5.0)
     // ~5M-voxel cap at 2 cm: bounded memory for a large single pass.
@@ -63,6 +64,9 @@ final class CaptureViewModel: ObservableObject {
         statusMessage = nil
         liveGeometry = .empty
         lastPreviewAt = 0
+        // Ask for location once, up front, so the first pass can be tagged
+        // without a stall. Declining is fine — capture proceeds ungeoreferenced.
+        location.requestAuthorization()
         session.onFrame = { [weak self] frame in
             // ARSession delivers delegate callbacks on the main thread; hop onto
             // the main actor (iOS 16-compatible, no assumeIsolated).
@@ -128,22 +132,27 @@ final class CaptureViewModel: ObservableObject {
             return false
         }
         do {
+            // Best-effort GPS tag for this pass (never blocks: ~2 s cap).
+            let fix = await location.currentFix()
             let scanID = ScanID()
             let ref = try await store.writeBlob(points: points, for: scanID)
             let quality = QualityReport(highConfidenceFraction: highConfidenceFraction(points))
             var set = project ?? Self.newProject(for: points)
             set.append(Scan(id: scanID, deviceModel: deviceModel(), pointCloud: ref,
                             pose: .identity, quality: quality,
-                            status: previousPass == nil ? .registered : .pendingRegister))
+                            status: previousPass == nil ? .registered : .pendingRegister,
+                            geoFix: fix))
             project = set
             try await store.save(set)
 
             let samples = Self.downsample(points, to: 2_000)
             if let previous = previousPass {
                 set = await Self.register(scanID, samples: samples, against: previous, in: set)
-                project = set
-                try await store.save(set)
             }
+            // Refresh the CRS from the best fix captured so far (ADR-0011).
+            set.deriveGeoreference()
+            project = set
+            try await store.save(set)
             previousPass = (scanID, samples)
             statusMessage = "Saved pass \(set.scanCount) · \(points.count) points."
             return true

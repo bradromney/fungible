@@ -29,6 +29,9 @@ targets:
         NSCameraUsageDescription: >-
           Fungible uses the camera and LiDAR scanner to capture 3D point clouds
           of your site.
+        NSLocationWhenInUseUsageDescription: >-
+          Fungible tags each scan with your location so projects can be
+          georeferenced for export. Optional — capture works without it.
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
     settings:

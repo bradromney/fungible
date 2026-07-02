@@ -45,6 +45,11 @@ final class ARDepthCaptureSession: NSObject, ARSessionDelegate {
         if ARWorldTrackingConfiguration.supportsSceneReconstruction(.mesh) {
             config.sceneReconstruction = .mesh
         }
+        // North-align the world frame (ADR-0011): with heading alignment the
+        // scan frame's +Z is true north, so a GPS anchor georeferences the cloud
+        // by translation alone — no rotation-to-north refinement needed. ARKit
+        // falls back to gravity-only indoors/without heading automatically.
+        config.worldAlignment = .gravityAndHeading
         session.delegate = self
         session.run(config, options: resetting ? [.resetTracking, .removeExistingAnchors] : [])
     }

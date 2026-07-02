@@ -58,6 +58,10 @@ public struct Scan: Identifiable, Equatable, Codable, Sendable {
     public var pose: Transform
     public var quality: QualityReport
     public var status: ScanStatus
+    /// GPS fix captured at finalize, if location was available (ADR-0011).
+    /// Optional so a scan without a fix — or written before GPS existed —
+    /// decodes cleanly (synthesized Codable uses decodeIfPresent for optionals).
+    public var geoFix: GeoFix?
 
     public init(
         id: ScanID = ScanID(),
@@ -66,7 +70,8 @@ public struct Scan: Identifiable, Equatable, Codable, Sendable {
         pointCloud: PointCloudRef = PointCloudRef(),
         pose: Transform = .identity,
         quality: QualityReport = QualityReport(),
-        status: ScanStatus = .capturing
+        status: ScanStatus = .capturing,
+        geoFix: GeoFix? = nil
     ) {
         self.id = id
         self.capturedAt = capturedAt
@@ -75,5 +80,6 @@ public struct Scan: Identifiable, Equatable, Codable, Sendable {
         self.pose = pose
         self.quality = quality
         self.status = status
+        self.geoFix = geoFix
     }
 }

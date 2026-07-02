@@ -54,10 +54,16 @@ public struct CoordinateReference: Equatable, Codable, Sendable {
     public var epsg: String?
     /// Translation from the local frame origin to the CRS origin (meters).
     public var originOffset: Vector3
+    /// The WGS84 fix the local frame origin sits at (ADR-0011). Gives the worker
+    /// everything it needs to project — the real-world lat/lon/alt of the origin
+    /// plus the target `epsg` — without on-device projection math. `nil` for a
+    /// manually-anchored or ungeoreferenced set.
+    public var geoAnchor: GeoFix?
 
-    public init(epsg: String? = nil, originOffset: Vector3 = .zero) {
+    public init(epsg: String? = nil, originOffset: Vector3 = .zero, geoAnchor: GeoFix? = nil) {
         self.epsg = epsg
         self.originOffset = originOffset
+        self.geoAnchor = geoAnchor
     }
 }
 
@@ -238,6 +244,31 @@ public struct ScanSet: Identifiable, Equatable, Codable, Sendable {
 
     public mutating func removeAnnotation(_ id: AnnotationID) {
         annotations.removeAll { $0.id == id }
+    }
+
+    // MARK: - Georeferencing (ADR-0011)
+
+    /// The most accurate valid GPS fix across the project's passes, if any.
+    public var bestGeoFix: GeoFix? {
+        scans.compactMap(\.geoFix).filter(\.isValid)
+            .min { $0.horizontalAccuracy < $1.horizontalAccuracy }
+    }
+
+    /// Derive a georeference from captured GPS and store it as the set CRS.
+    /// Anchors the local origin to the FIRST pass's fix when it has one (the
+    /// origin pass is at identity, so that anchor is exact); otherwise falls back
+    /// to the most accurate fix, which anchors within GPS error (±3–5 m). Names
+    /// the target UTM zone; the worker does the projection. No-op without a valid
+    /// fix. Returns whether a CRS was set.
+    @discardableResult
+    public mutating func deriveGeoreference() -> Bool {
+        let originFix = scans.first?.geoFix.flatMap { $0.isValid ? $0 : nil }
+        guard let anchor = originFix ?? bestGeoFix else { return false }
+        crs = CoordinateReference(
+            epsg: Geodesy.utmEPSG(latitude: anchor.latitude, longitude: anchor.longitude),
+            geoAnchor: anchor
+        )
+        return true
     }
 
     /// Aggregate coverage across the set, clamped to [0,1].
