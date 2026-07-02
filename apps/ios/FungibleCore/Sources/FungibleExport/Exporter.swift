@@ -3,11 +3,11 @@ import FungibleDomain
 import FungibleCapture
 
 // Pro-grade export (research §3/§9). Today we ship correct, dependency-free
-// **PLY** and **XYZ** — both read directly by CloudCompare, ReCap, and most
-// survey/CAD tools — so a captured scan is immediately useful elsewhere. The
-// survey-standard codecs (LAS/LAZ, E57, COPC) come via the vetted bridged
-// libraries (las-rs/LASzip, libE57Format, copc-lib) behind this same protocol;
-// hand-rolling LAS risks subtle non-conformance, so we don't.
+// **PLY**, **XYZ**, and **LAS 1.2** (round-trip-verified in tests) — all read
+// directly by CloudCompare, ReCap, Cyclone, QGIS, and most survey/CAD tools —
+// so a captured scan is immediately useful elsewhere. The compressed codecs
+// (LAZ, E57, COPC) still come via the vetted bridged libraries (las-rs/LASzip,
+// libE57Format, copc-lib) behind this same protocol.
 
 public enum ExportFormat: String, CaseIterable, Sendable {
     case plyBinary   // PLY, binary little-endian (compact, recommended)

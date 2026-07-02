@@ -44,4 +44,6 @@ public enum StorageError: Error, Equatable, Sendable {
     case blobNotFound
     case writeFailed(String)
     case corrupted
+    /// The blob was written by a newer codec version this build can't read.
+    case unsupportedVersion(UInt32)
 }

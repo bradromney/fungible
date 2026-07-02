@@ -62,4 +62,16 @@ final class CutFillTests: XCTestCase {
         let b = try XCTUnwrap(HeightGrid.topSurface(from: flatSurface(y: 0), cellSize: 2))
         XCTAssertNil(CutFillEngine.compare(existing: a, design: b))
     }
+
+    func testMisalignedOriginsReturnNil() throws {
+        // Same shape and cell size, but the design surface sits 10 m east: the
+        // grids cover different ground, so a cell-by-cell compare must refuse
+        // rather than integrate misaligned heights into a wrong volume.
+        let shifted = flatSurface(y: 1).map { Vector3($0.x + 10, $0.y, $0.z) }
+        let existing = try XCTUnwrap(HeightGrid.topSurface(from: flatSurface(y: 0), cellSize: 1))
+        let design = try XCTUnwrap(HeightGrid.topSurface(from: shifted, cellSize: 1))
+        XCTAssertEqual(existing.columns, design.columns)
+        XCTAssertEqual(existing.rows, design.rows)
+        XCTAssertNil(CutFillEngine.compare(existing: existing, design: design))
+    }
 }

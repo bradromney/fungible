@@ -34,9 +34,15 @@ public struct FileScanStore: ScanStore {
     public func loadSets() async throws -> [ScanSet] {
         let urls = (try? fm.contentsOfDirectory(at: setsDir, includingPropertiesForKeys: nil)) ?? []
         let decoder = JSONDecoder()
-        return try urls
+        // One truncated/corrupt catalog file must not take the whole library
+        // down with it — skip it and load the rest. (Field-level tolerance for
+        // *readable* JSON lives in ScanSet's tolerant Codable init.)
+        return urls
             .filter { $0.pathExtension == "json" }
-            .compactMap { try decoder.decode(ScanSet.self, from: Data(contentsOf: $0)) }
+            .compactMap { url in
+                guard let data = try? Data(contentsOf: url) else { return nil }
+                return try? decoder.decode(ScanSet.self, from: data)
+            }
             .sorted { $0.createdAt < $1.createdAt }
     }
 

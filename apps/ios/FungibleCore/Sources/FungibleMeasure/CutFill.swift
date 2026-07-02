@@ -93,11 +93,20 @@ public struct CutFillResult: Equatable, Sendable {
 
 public enum CutFillEngine {
     /// Compare two grids of identical geometry (same origin/cellSize/dimensions).
-    /// Cells missing a height in either surface are skipped.
+    /// Cells missing a height in either surface are skipped. Returns nil when the
+    /// grids are misaligned — including different origins: `topSurface` derives
+    /// the origin from the data bounds, so two same-shaped grids built from
+    /// different point sets generally do NOT cover the same ground, and comparing
+    /// them cell-by-cell would produce silently wrong volumes.
     public static func compare(existing: HeightGrid, design: HeightGrid) -> CutFillResult? {
+        // Origins must coincide to a tolerance far below any real cell size;
+        // exact double equality would be needlessly brittle for derived origins.
+        let originTolerance = existing.cellSize * 1e-9
         guard existing.columns == design.columns,
               existing.rows == design.rows,
-              existing.cellSize == design.cellSize else { return nil }
+              existing.cellSize == design.cellSize,
+              abs(existing.originX - design.originX) <= originTolerance,
+              abs(existing.originZ - design.originZ) <= originTolerance else { return nil }
 
         var cut = 0.0, fill = 0.0, compared = 0
         let area = existing.cellArea

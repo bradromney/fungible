@@ -40,6 +40,33 @@ final class ICPFineAlignerTests: XCTestCase {
         XCTAssertLessThan(result.inlierRMSE, 1e-6)
     }
 
+    func testReportedRMSEMatchesReturnedTransform() async throws {
+        let src = gridCloud()
+        let half = (5.0 * Double.pi / 180.0) / 2.0
+        let q = Quaternion(w: cos(half), x: 0, y: sin(half), z: 0).normalized()
+        let truth = Transform(rotation: q, translation: Vector3(0.08, 0.02, -0.04))
+        let tgt = src.map { truth.apply(to: $0) }
+
+        let aligner = ICPFineAligner()
+        let result = try await aligner.refine(source: sample(src), target: sample(tgt), initial: .identity)
+
+        // Recompute the inlier RMSE directly under the *returned* transform; the
+        // reported number must describe that pose, not the previous iteration's.
+        var sqSum = 0.0
+        var inliers = 0
+        for p in src {
+            let tp = result.transform.apply(to: p)
+            let nearest = tgt.map { tp.distance(to: $0) }.min() ?? .greatestFiniteMagnitude
+            if nearest <= aligner.maxCorrespondenceDistance {
+                inliers += 1
+                sqSum += nearest * nearest
+            }
+        }
+        let recomputed = (sqSum / Double(inliers)).squareRoot()
+        XCTAssertEqual(result.inlierRMSE, recomputed, accuracy: 1e-9)
+        XCTAssertEqual(result.fitness, Double(inliers) / Double(src.count), accuracy: 1e-9)
+    }
+
     func testRejectsTooFewPoints() async {
         do {
             _ = try await ICPFineAligner().refine(

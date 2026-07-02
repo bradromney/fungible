@@ -35,6 +35,10 @@ public enum PointCloudCodec {
         guard bytes.count >= headerSize, Array(bytes[0..<4]) == magic else {
             throw StorageError.corrupted
         }
+        // Reject unknown versions rather than mis-decoding a future layout as v1.
+        guard readLE32(bytes, 4) == version else {
+            throw StorageError.unsupportedVersion(readLE32(bytes, 4))
+        }
         let count = Int(readLE32(bytes, 8))
         guard bytes.count == headerSize + count * pointStride else {
             throw StorageError.corrupted

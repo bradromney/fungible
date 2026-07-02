@@ -31,7 +31,6 @@ public struct ICPFineAligner: FineAligner {
 
         var current = initial
         var lastRMSE = Double.greatestFiniteMagnitude
-        var inliers = 0
 
         for _ in 0..<maxIterations {
             var srcMatched: [Vector3] = []
@@ -47,19 +46,37 @@ public struct ICPFineAligner: FineAligner {
                 }
             }
 
-            inliers = srcMatched.count
-            guard inliers >= 3 else { throw RegistrationError.insufficientOverlap }
+            guard srcMatched.count >= 3 else { throw RegistrationError.insufficientOverlap }
 
-            let rmse = (sqSum / Double(inliers)).squareRoot()
+            let rmse = (sqSum / Double(srcMatched.count)).squareRoot()
             guard let delta = RigidAlignment.align(source: srcMatched, target: tgtMatched) else { break }
             current = delta.composed(with: current)
 
-            if abs(lastRMSE - rmse) < convergenceDelta { lastRMSE = rmse; break }
+            if abs(lastRMSE - rmse) < convergenceDelta { break }
             lastRMSE = rmse
         }
 
+        // Measure once more under the final pose: inside the loop the RMSE is
+        // computed *before* the solve advances `current`, so reporting it would
+        // hand QualityReport a number one iteration staler than the transform
+        // we return.
+        var inliers = 0
+        var sqSum = 0.0
+        for p in source.points {
+            let tp = current.apply(to: p)
+            if let hit = index.nearest(to: tp), hit.distance <= maxCorrespondenceDistance {
+                inliers += 1
+                sqSum += hit.distance * hit.distance
+            }
+        }
+        guard inliers >= 3 else { throw RegistrationError.insufficientOverlap }
+
         let fitness = Double(inliers) / Double(source.points.count)
-        return RegistrationResult(transform: current, fitness: fitness, inlierRMSE: lastRMSE)
+        return RegistrationResult(
+            transform: current,
+            fitness: fitness,
+            inlierRMSE: (sqSum / Double(inliers)).squareRoot()
+        )
     }
 }
 

@@ -12,10 +12,26 @@ public struct LASExporter: PointCloudExporter {
     public var format: ExportFormat { .las }
     /// Stored coordinate precision (meters per integer step).
     public var scale: Double
+    /// EPSG code of the projected, metre-based CRS the supplied coordinates are
+    /// **already expressed in** (e.g. 32613 for UTM 13N). When set, the file
+    /// carries a GeoTIFF GeoKeyDirectory VLR so GIS/survey tools place it on the
+    /// map. The exporter tags — it does not transform: apply
+    /// `CoordinateReference.toCRS` to the points first (the anchor workflow in
+    /// FungibleDomain.Georeferencing). Nil = local scan frame, no VLR.
+    public var epsgCode: UInt16?
 
-    public init(scale: Double = 0.001) {
+    public init(scale: Double = 0.001, epsgCode: UInt16? = nil) {
         precondition(scale > 0)
         self.scale = scale
+        self.epsgCode = epsgCode
+    }
+
+    /// Parse a domain CRS string ("EPSG:32613", "epsg:32613", or bare "32613")
+    /// into a GeoKey-compatible code.
+    public static func epsgCode(from epsg: String?) -> UInt16? {
+        guard let epsg else { return nil }
+        let tail = epsg.split(separator: ":").last.map(String.init) ?? epsg
+        return UInt16(tail.trimmingCharacters(in: .whitespaces))
     }
 
     public func data(for points: [CapturedPoint]) -> Data {
@@ -33,10 +49,11 @@ public struct LASExporter: PointCloudExporter {
         }
         let offX = minX, offY = minY, offZ = minZ
 
-        var data = Data(capacity: 227 + points.count * 26)
+        var data = Data(capacity: 227 + Self.geoKeyVLRSize + points.count * 26)
         writeHeader(&data, count: points.count,
                     offset: (offX, offY, offZ),
                     bounds: (minX, maxX, minY, maxY, minZ, maxZ))
+        if let epsg = epsgCode { writeGeoKeyVLR(&data, epsg: epsg) }
 
         for p in points {
             appendI32(&data, scaled(p.position.x, offX))   // X = east
@@ -75,8 +92,9 @@ public struct LASExporter: PointCloudExporter {
         appendU16(&data, 0)                                // @90 creation day
         appendU16(&data, 0)                                // @92 creation year
         appendU16(&data, 227)                              // @94 header size
-        appendU32(&data, 227)                              // @96 offset to points
-        appendU32(&data, 0)                                // @100 num VLRs
+        let vlrBytes = epsgCode == nil ? 0 : Self.geoKeyVLRSize
+        appendU32(&data, UInt32(227 + vlrBytes))           // @96 offset to points
+        appendU32(&data, epsgCode == nil ? 0 : 1)          // @100 num VLRs
         data.append(2)                                     // @104 point format
         appendU16(&data, 26)                               // @105 record length
         appendU32(&data, UInt32(count))                    // @107 num point records
@@ -88,6 +106,34 @@ public struct LASExporter: PointCloudExporter {
         appendDouble(&data, bounds.1); appendDouble(&data, bounds.0)
         appendDouble(&data, bounds.3); appendDouble(&data, bounds.2)
         appendDouble(&data, bounds.5); appendDouble(&data, bounds.4)
+    }
+
+    // MARK: - GeoKey VLR (georeferencing)
+
+    /// 54-byte VLR header + a 4-key GeoKeyDirectoryTag payload (20 shorts).
+    static let geoKeyVLRSize = 54 + 40
+
+    /// GeoTIFF GeoKeyDirectoryTag (record 34735) declaring: projected model,
+    /// the projected CRS EPSG code, and metre linear/vertical units. Key IDs
+    /// must be ascending per the GeoTIFF spec.
+    private func writeGeoKeyVLR(_ data: inout Data, epsg: UInt16) {
+        appendU16(&data, 0)                                       // reserved
+        appendFixedString(&data, "LASF_Projection", length: 16)   // user id
+        appendU16(&data, 34735)                                   // record id
+        appendU16(&data, 40)                                      // payload length
+        appendFixedString(&data, "GeoKeyDirectoryTag", length: 32)
+
+        let keys: [(UInt16, UInt16, UInt16, UInt16)] = [
+            (1, 1, 0, 4),          // directory version, revision 1.0, 4 keys
+            (1024, 0, 1, 1),       // GTModelTypeGeoKey = projected
+            (3072, 0, 1, epsg),    // ProjectedCSTypeGeoKey
+            (3076, 0, 1, 9001),    // ProjLinearUnitsGeoKey = metre
+            (4099, 0, 1, 9001),    // VerticalUnitsGeoKey = metre
+        ]
+        for (a, b, c, d) in keys {
+            appendU16(&data, a); appendU16(&data, b)
+            appendU16(&data, c); appendU16(&data, d)
+        }
     }
 
     // MARK: - Little-endian writers
