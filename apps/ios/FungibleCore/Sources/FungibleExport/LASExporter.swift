@@ -19,6 +19,16 @@ public struct LASExporter: PointCloudExporter {
     }
 
     public func data(for points: [CapturedPoint]) -> Data {
+        data(for: points, sourceIDs: nil)
+    }
+
+    /// Write with per-point provenance: `sourceIDs` is parallel to `points`
+    /// (1-based per source scan; 0 = unassigned, per spec) and lands in each
+    /// record's point-source-ID field — so an exported merge can be split back
+    /// into its scans in CloudCompare/ReCap (ADR-0010 external unmerge).
+    public func data(for points: [CapturedPoint], sourceIDs: [UInt16]?) -> Data {
+        precondition(sourceIDs == nil || sourceIDs!.count == points.count,
+                     "sourceIDs must parallel points")
         // Map to LAS axes and find bounds.
         var minX = 0.0, minY = 0.0, minZ = 0.0, maxX = 0.0, maxY = 0.0, maxZ = 0.0
         if let first = points.first {
@@ -38,7 +48,7 @@ public struct LASExporter: PointCloudExporter {
                     offset: (offX, offY, offZ),
                     bounds: (minX, maxX, minY, maxY, minZ, maxZ))
 
-        for p in points {
+        for (i, p) in points.enumerated() {
             appendI32(&data, scaled(p.position.x, offX))   // X = east
             appendI32(&data, scaled(p.position.z, offY))   // Y = north
             appendI32(&data, scaled(p.position.y, offZ))   // Z = elevation
@@ -47,7 +57,7 @@ public struct LASExporter: PointCloudExporter {
             data.append(0)                                 // classification
             data.append(0)                                 // scan angle rank
             data.append(0)                                 // user data
-            appendU16(&data, 0)                            // point source id
+            appendU16(&data, sourceIDs?[i] ?? 0)           // point source id
             appendU16(&data, UInt16(p.r) &* 257)           // 8-bit → 16-bit
             appendU16(&data, UInt16(p.g) &* 257)
             appendU16(&data, UInt16(p.b) &* 257)
