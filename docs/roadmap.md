@@ -49,10 +49,19 @@ via the bridged codecs (las-rs/LASzip, libE57Format), and the share sheet.
 The headline differentiator. Highest technical risk → time-boxed spike first.
 
 - Bridge **small_gicp** (fine) + **TEASER++** (coarse) + **GTSAM** (pose graph)
+  — pure-Swift baselines shipped first per ADR-0008 (`ICPFineAligner`,
+  `ChainPoseGraphOptimizer`); bridges remain drop-ins behind the protocols
 - `Registrar`: incremental scan-to-submap registration as a background job
 - Pose-graph optimization on add; loop-closure constraints (RTAB-Map-style)
 - Set view: many scans merged into one cloud, reversible scan re-assign/split
 - **Demo:** capture 25+ scans of a site; they auto-merge into one aligned cloud.
+
+Landed (CI-tested): ARKit **pose priors** thread into fine alignment
+(`register(prior:)` — ICP no longer seeds from identity, so real inter-scan
+motion registers), and **scan-to-submap** is wired (`SubmapSelector` +
+`neighborSamples` adds redundant `.submap` graph edges). Remaining: a real
+least-squares pose-graph optimizer, loop closure, and wiring registration
+into the app's capture flow.
 
 ## M4 — Measurement + cut/fill (the second moat)
 
@@ -72,6 +81,13 @@ the on-cloud measurement UI and wiring DEM→contours→DXF in the app.
   S3/R2 via background resumable upload, or iCloud first)
 - Web viewer: **Potree** share link from a tiled (PDAL→COPC) upload
 - **Demo:** scan on phone → open shareable web link on desktop.
+
+Landed (CI-tested): **`HostedSyncProvider`** — the first cloud driver, speaking
+the `services/api` contract (create set, upload blob, mint/revoke expiring
+share links) over an injectable transport; the API enforces bearer auth +
+token-scoped public reads; the web viewer resolves `?share=<token>&api=<base>`
+end-to-end. Remaining: wire the driver into the app (ShareWebView mints real
+links), resumable/background transfer, and COPC tiling for streaming.
 
 ## M6 — Pro export + polish → TestFlight → App Store
 
